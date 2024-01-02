@@ -1,0 +1,30 @@
+{
+  "name": "webgpu-raytracer",
+  "version": "1.0.0",
+  "description": "Raytracing in WebGPU for educational purposes",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gnikoloff/webgpu-raytracer.git"
+  },
+  "keywords": [
+    "webgpu",
+    "raytracing"
+  ],
+  "author": "Georgi Nikolov",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gnikoloff/webgpu-raytracer/issues"
+  },
+  "homepage": "https://github.com/gnikoloff/webgpu-raytracer#readme",
+  "devDependencies": {
+    "@webgpu/types": "^0.1.40",
+    "vite": "^5.0.10",
+    "vite-plugin-top-level-await": "^1.4.1"
+  }
+}
