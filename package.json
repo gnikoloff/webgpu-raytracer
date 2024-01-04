@@ -26,5 +26,8 @@
     "@webgpu/types": "^0.1.40",
     "vite": "^5.0.10",
     "vite-plugin-top-level-await": "^1.4.1"
+  },
+  "dependencies": {
+    "wgsl-preprocessor": "^1.0.1"
   }
 }
