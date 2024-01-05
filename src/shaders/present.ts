@@ -1,8 +1,12 @@
 import { wgsl } from "wgsl-preprocessor/wgsl-preprocessor.js";
 
+import CommonShaderChunk from "./utils/common";
+
 export default wgsl/* wgsl */ `
-  @group(0) @binding(0) var mySampler: sampler;
-  @group(0) @binding(1) var raytracedTexture: texture_2d<f32>;
+  @group(0) @binding(0) var<storage, read_write> raytraceImageBuffer: array<vec3f>;
+  @group(0) @binding(1) var<uniform> commonUniforms: CommonUniforms;
+
+  ${CommonShaderChunk}
 
   struct VertexOutput {
     @builtin(position) Position: vec4<f32>,
@@ -29,6 +33,10 @@ export default wgsl/* wgsl */ `
 
   @fragment
   fn fragmentMain(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
-    return textureSample(raytracedTexture, mySampler, uv);
+    let x = u32(uv.x * f32(commonUniforms.viewportSize.x));
+    let y = u32(uv.y * f32(commonUniforms.viewportSize.y));
+    let idx = x + y * commonUniforms.viewportSize.x;
+    var a = raytraceImageBuffer[idx];
+    return vec4f(a, 1.0);
   }
 `;

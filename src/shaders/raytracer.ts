@@ -12,7 +12,7 @@ export type WorkGroupSize = [number, number, number];
 
 export default wgsl/* wgsl */ `
 
-  @group(0) @binding(0) var raytracedTexture: texture_storage_2d<rgba8unorm, write>;
+  @group(0) @binding(0) var<storage, read_write> raytraceImageBuffer: array<vec3f>;
   @group(0) @binding(1) var<uniform> commonUniforms: CommonUniforms;
 
   override workgroupSizeX: u32;
@@ -28,27 +28,33 @@ export default wgsl/* wgsl */ `
 
   @compute @workgroup_size(workgroupSizeX, workgroupSizeY)
   fn main(
-    @builtin(workgroup_id) WorkGroupID : vec3<u32>,
-    @builtin(global_invocation_id) globalInvocationId : vec3<u32>
+    @builtin(workgroup_id) workgroup_id : vec3<u32>,
+    @builtin(global_invocation_id) globalInvocationId : vec3<u32>,
+    @builtin(local_invocation_id) LocalInvocationID : vec3<u32>,
     // @builtin(workgroup_id) WorkGroupID : vec3<u32>,
-    // @builtin(local_invocation_id) LocalInvocationID : vec3<u32>
+    @builtin(local_invocation_index) local_invocation_index : u32,
+    @builtin(num_workgroups) num_workgroups: vec3<u32>
   ) {
-    let texSize = textureDimensions(raytracedTexture);
-    let fTexSize = vec2<f32>(texSize);
-
-    if (any(globalInvocationId.xy > texSize)) {
+    if (any(globalInvocationId.xy > commonUniforms.viewportSize)) {
       return;
     }
 
     init_rand(globalInvocationId);
 
     let pos = globalInvocationId.xy;
+
+    // let baseIndex = workgroup_id.xy + LocalInvocationID.xy;
+
+
     let x = f32(pos.x);
     let y = f32(pos.y);
 
+
+    let idx = pos.x + pos.y * commonUniforms.viewportSize.x;
+
     var camera: Camera;
-    camera.imageWidth = fTexSize.x;
-    camera.aspectRatio = fTexSize.x / fTexSize.y;
+    camera.imageWidth = f32(commonUniforms.viewportSize.x);
+    camera.aspectRatio = f32(commonUniforms.viewportSize.x) / f32(commonUniforms.viewportSize.y);
     initCamera(&camera);
 
     let pixelCenter = camera.pixel00Loc + (x * camera.pixelDeltaU) + (y * camera.pixelDeltaV);
@@ -66,7 +72,7 @@ export default wgsl/* wgsl */ `
     var r = Ray(camera.center, rayDirection);
     var hitRec: HitRecord;
 
-    let maxBounces = 2;
+    let maxBounces = 3;
     var frac = vec3f(1);
 
     var rayBounce: i32;
@@ -102,24 +108,10 @@ export default wgsl/* wgsl */ `
 
     color += radiance;
 
-    // if (hitAnything) {
-    //   color = traceColor;
-    // } else {
-    //   let unitDirection = normalize(r.direction);
-    //   let a = 0.5 * (unitDirection.y + 1.0);
-    //   color += (1.0 - a) * vec3f(1.0, 1.0, 1.0) + a * vec3f(1, 0.0, 0);
-    // }
+    let weight = 1.0 / f32(commonUniforms.frameCounter + 1);
+    let prevColor = raytraceImageBuffer[idx];
+    raytraceImageBuffer[idx] = (1.0 - weight) * prevColor + weight * color;
 
-    // color.r /= f32(maxBounces);
-    // color.g /= f32(maxBounces);
-    // color.b /= f32(maxBounces);
-
-    // if () {
-    //   color = (hitRec.normal + vec3f(1)) * 0.5;
-    // } else {
-    //   color = vec3f(0);
-    // }
-    
-    textureStore(raytracedTexture, pos, vec4(color, 1));
+    // textureStore(raytracedTexture, pos, vec4(color, 1));
   }
 `;

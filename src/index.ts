@@ -4,11 +4,20 @@ import raytracerShaderSrc from "./shaders/raytracer";
 const canvas = document.createElement("canvas") as HTMLCanvasElement;
 resize();
 
-const shaderSeed = new Uint32Array(3);
+const shaderSeed = new Uint32Array([
+	Math.random(),
+	Math.random(),
+	Math.random(),
+]);
 const frameCounter = new Uint32Array([0]);
+const viewportSize = new Uint32Array(4);
 
 const adapter = await navigator.gpu.requestAdapter();
-const device = await adapter.requestDevice();
+const device = await adapter.requestDevice({
+	requiredLimits: {
+		maxStorageBufferBindingSize: 100 * 1024 * 1024,
+	},
+});
 
 const context = canvas.getContext("webgpu") as GPUCanvasContext;
 
@@ -59,22 +68,13 @@ const computePipeline = device.createComputePipeline({
 	},
 });
 
-const raytracedTexture = device.createTexture({
-	size: {
-		width: canvas.width,
-		height: canvas.height,
-	},
-	format: "rgba8unorm",
-	usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING,
-});
-
-const sampler = device.createSampler({
-	magFilter: "linear",
-	minFilter: "linear",
+const raytracedStorageBuffer = device.createBuffer({
+	size: Float32Array.BYTES_PER_ELEMENT * 4 * canvas.width * canvas.height,
+	usage: GPUBufferUsage.STORAGE,
 });
 
 const commonUniformsBuffer = device.createBuffer({
-	size: 4 * Uint32Array.BYTES_PER_ELEMENT,
+	size: 8 * Uint32Array.BYTES_PER_ELEMENT,
 	usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
 
@@ -83,11 +83,15 @@ const showResultBindGroup = device.createBindGroup({
 	entries: [
 		{
 			binding: 0,
-			resource: sampler,
+			resource: {
+				buffer: raytracedStorageBuffer,
+			},
 		},
 		{
 			binding: 1,
-			resource: raytracedTexture.createView(),
+			resource: {
+				buffer: commonUniformsBuffer,
+			},
 		},
 	],
 });
@@ -97,7 +101,9 @@ const computeBindGroup0 = device.createBindGroup({
 	entries: [
 		{
 			binding: 0,
-			resource: raytracedTexture.createView(),
+			resource: {
+				buffer: raytracedStorageBuffer,
+			},
 		},
 		{
 			binding: 1,
@@ -129,12 +135,19 @@ function drawFrame(ts) {
 	shaderSeed[1] = Math.random() * 0xffffff;
 	shaderSeed[2] = Math.random() * 0xffffff;
 	frameCounter[0] += 1;
+	viewportSize[0] = canvas.width;
+	viewportSize[1] = canvas.height;
 
 	device.queue.writeBuffer(commonUniformsBuffer, 0, shaderSeed);
 	device.queue.writeBuffer(
 		commonUniformsBuffer,
 		3 * Uint32Array.BYTES_PER_ELEMENT,
 		frameCounter,
+	);
+	device.queue.writeBuffer(
+		commonUniformsBuffer,
+		4 * Uint32Array.BYTES_PER_ELEMENT,
+		viewportSize,
 	);
 
 	const computePass = commandEncoder.beginComputePass();
@@ -158,8 +171,8 @@ function drawFrame(ts) {
 }
 
 function resize() {
-	canvas.width = innerWidth * devicePixelRatio;
-	canvas.height = innerHeight * devicePixelRatio;
+	canvas.width = innerWidth; //* devicePixelRatio;
+	canvas.height = innerHeight; //* devicePixelRatio;
 	canvas.style.width = `${innerWidth}px`;
 	canvas.style.height = `${innerHeight}px`;
 }
