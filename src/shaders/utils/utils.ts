@@ -4,6 +4,8 @@ export default wgsl/* wgsl */ `
   const f32min = 0x1p-126f;
   const f32max = 0x1.fffffep+127;
 
+  const pi = ${Math.PI};
+
   // A psuedo random number. Initialized with init_rand(), updated with rand().
   var<private> rnd : vec3u;
 
@@ -16,6 +18,7 @@ export default wgsl/* wgsl */ `
   }
 
   // Returns a random number between 0 and 1.
+  @must_use
   fn rand() -> f32 {
     const C = vec3(60493  * 9377,
                   11279  * 2539 * 23,

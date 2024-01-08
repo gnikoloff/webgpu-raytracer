@@ -1,12 +1,14 @@
 import { wgsl } from "wgsl-preprocessor/wgsl-preprocessor.js";
 
-import CommonShaderChunk from "./utils/common";
+import CameraShaderChunk from "./utils/camera";
+import ColorShaderChunk from "./utils/color";
 
 export default wgsl/* wgsl */ `
-  @group(0) @binding(0) var<storage, read_write> raytraceImageBuffer: array<vec3f>;
-  @group(0) @binding(1) var<uniform> commonUniforms: CommonUniforms;
+  ${CameraShaderChunk}
+  ${ColorShaderChunk}
 
-  ${CommonShaderChunk}
+  @group(0) @binding(0) var<storage, read_write> raytraceImageBuffer: array<vec3f>;
+  @group(0) @binding(1) var<uniform> cameraUniforms: Camera;
 
   struct VertexOutput {
     @builtin(position) Position: vec4<f32>,
@@ -33,10 +35,12 @@ export default wgsl/* wgsl */ `
 
   @fragment
   fn fragmentMain(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
-    let x = u32(uv.x * f32(commonUniforms.viewportSize.x));
-    let y = u32(uv.y * f32(commonUniforms.viewportSize.y));
-    let idx = x + y * commonUniforms.viewportSize.x;
-    var a = raytraceImageBuffer[idx];
-    return vec4f(a, 1.0);
+    let x = u32(uv.x * f32(cameraUniforms.viewportSize.x));
+    let y = u32(uv.y * f32(cameraUniforms.viewportSize.y));
+    let idx = x + y * cameraUniforms.viewportSize.x;
+    var color = raytraceImageBuffer[idx];
+
+    color = lottes(color);
+    return vec4f(color, 1.0);
   }
 `;

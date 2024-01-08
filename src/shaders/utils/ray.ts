@@ -6,6 +6,7 @@ export default wgsl/* wgsl */ `
     direction: vec3f,
   };
 
+  @must_use
   fn rayAt(ray: ptr<function, Ray>, t: f32) -> vec3f {
     return (*ray).origin + (*ray).direction * t;
   }

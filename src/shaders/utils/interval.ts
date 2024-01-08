@@ -6,14 +6,17 @@ export default wgsl/* wgsl */ `
     max: f32,
   };
 
+  @must_use
   fn intervalContains(interval: Interval, x: f32) -> bool {
     return interval.min <= x && x <= interval.max;
   }
 
+  @must_use
   fn intervalSurrounds(interval: Interval, x: f32) -> bool {
     return interval.min < x && x < interval.max;
   }
 
+  @must_use
   fn intervalClamp(interval: Interval, x: f32) -> f32 {
     var out = x;
     if (x < interval.min) {

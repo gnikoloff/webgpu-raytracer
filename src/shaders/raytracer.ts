@@ -7,13 +7,15 @@ import VecShaderChunk from "./utils/vec";
 import HittableShaderChunk from "./utils/hittable";
 import IntervalShaderChunk from "./utils/interval";
 import CameraShaderChunk from "./utils/camera";
-
-export type WorkGroupSize = [number, number, number];
+import CameraHelpersShaderChunk from "./utils/camera-helpers";
+import ColorShaderChunk from "./utils/color";
+import MaterialShaderChunk from "./utils/material";
 
 export default wgsl/* wgsl */ `
 
   @group(0) @binding(0) var<storage, read_write> raytraceImageBuffer: array<vec3f>;
   @group(0) @binding(1) var<uniform> commonUniforms: CommonUniforms;
+  @group(0) @binding(2) var<uniform> cameraUniforms: Camera;
 
   override workgroupSizeX: u32;
   override workgroupSizeY: u32;
@@ -25,93 +27,95 @@ export default wgsl/* wgsl */ `
   ${HittableShaderChunk}
   ${IntervalShaderChunk}
   ${CameraShaderChunk}
+  ${CameraHelpersShaderChunk}
+  ${ColorShaderChunk}
+  ${MaterialShaderChunk}
 
   @compute @workgroup_size(workgroupSizeX, workgroupSizeY)
-  fn main(
-    @builtin(workgroup_id) workgroup_id : vec3<u32>,
-    @builtin(global_invocation_id) globalInvocationId : vec3<u32>,
-    @builtin(local_invocation_id) LocalInvocationID : vec3<u32>,
-    // @builtin(workgroup_id) WorkGroupID : vec3<u32>,
-    @builtin(local_invocation_index) local_invocation_index : u32,
-    @builtin(num_workgroups) num_workgroups: vec3<u32>
-  ) {
-    if (any(globalInvocationId.xy > commonUniforms.viewportSize)) {
+  fn main(@builtin(global_invocation_id) globalInvocationId : vec3<u32>,) {
+    if (any(globalInvocationId.xy > cameraUniforms.viewportSize)) {
       return;
     }
 
     init_rand(globalInvocationId);
 
     let pos = globalInvocationId.xy;
-
-    // let baseIndex = workgroup_id.xy + LocalInvocationID.xy;
-
-
     let x = f32(pos.x);
     let y = f32(pos.y);
+    let idx = pos.x + pos.y * cameraUniforms.viewportSize.x;
 
-
-    let idx = pos.x + pos.y * commonUniforms.viewportSize.x;
-
-    var camera: Camera;
-    camera.imageWidth = f32(commonUniforms.viewportSize.x);
-    camera.aspectRatio = f32(commonUniforms.viewportSize.x) / f32(commonUniforms.viewportSize.y);
+    var camera = cameraUniforms;
     initCamera(&camera);
 
-    let pixelCenter = camera.pixel00Loc + (x * camera.pixelDeltaU) + (y * camera.pixelDeltaV);
-    let rayDirection = pixelCenter - camera.center;
+    var spheres: array<Sphere, 5>;
+    spheres[0] = Sphere(vec3(0, -100.5, -1), 100, 0);
+    spheres[1] = Sphere(vec3(0, 0, -1), 0.5, 1);
+    spheres[2] = Sphere(vec3(-1, 0, -1), 0.5, 2);
+    spheres[3] = Sphere(vec3(-1, 0, -1), -0.4, 2);
+    spheres[4] = Sphere(vec3(1, 0, -1), 0.5, 3);
 
-    var spheres: array<Sphere, 4>;
-    spheres[0] = Sphere(vec3(0, -100.5, -1), 100);
-    spheres[2] = Sphere(vec3(0, 105, -1), 100);
-    spheres[3] = Sphere(vec3(0, 105, -200), 300);
-    spheres[1] = Sphere(vec3(0, 0, -1), 0.5);
+    var materials: array<Material, 4>;
+    materials[0] = makeLambertianMaterial(vec3f(0.8, 0.8, 0.0));
+    materials[1] = makeLambertianMaterial(vec3f(0.1, 0.2, 0.5));
+    materials[2] = makeDielectricMaterial(1.5);
+    materials[3] = makeMetalMaterial(vec3f(0.8, 0.6, 0.2), 0.0);
     
     var color = vec3f(0);
     let numSamples: i32 = 10;
 
-    var r = Ray(camera.center, rayDirection);
     var hitRec: HitRecord;
 
-    let maxBounces = 3;
-    var frac = vec3f(1);
-
-    var rayBounce: i32;
+    var throughput = vec3f(1);
 
     var radiance = vec3f(0);
-    for (var samples = 0; samples < 1; samples++) {
-      var r = getCameraRay(&camera, x, y);
-      for (rayBounce = 0; rayBounce < maxBounces; rayBounce++) {
-        if (spheresHit(&r, &hitRec, Interval(0.001, f32max), spheres)) {
-          var sphereColor: vec3f;
-          var emission = vec3f(0.3);
-          if (hitRec.meshIdx == 0) {
-            sphereColor = vec3f(1, 0, 0);
-          } else if (hitRec.meshIdx == 1) {
-            sphereColor = vec3f(0.3);
-          } else if (hitRec.meshIdx == 2) {
-            sphereColor = vec3f(0, 0, 1);
-            emission = vec3f(0.6);
-          } else {
-            sphereColor = vec3f(0.2, 1, 1);
-          }
+    var r = getCameraRay(&camera, x, y);
+    for (var rayBounce = 0u; rayBounce < commonUniforms.maxBounces; rayBounce++) {
+      if (spheresHit(&r, &hitRec, Interval(0.001, f32max), spheres)) {
 
-          radiance += emission * frac;
-          
-          r.origin = hitRec.p;
-          r.direction = randomUnitVec3OnHemisphere(hitRec.normal);
-          frac *= sphereColor * 2 * dot(hitRec.normal, r.direction);
+        var scattered: Ray;
+        var attenuation: vec3f;
+        var material = materials[hitRec.materialIdx];
+
+        var scatters = false;
+
+        if (material.materialType == MATERIAL_LAMBERTIAN) {
+          scatters = scatterLambertian(&material, &r, &scattered, &hitRec, &attenuation);
+        } else if (material.materialType == MATERIAL_METAL) {
+          scatters = scatterMetal(&material, &r, &scattered, &hitRec, &attenuation);
+        } else if (material.materialType == MATERIAL_DIELECTRIC) {
+          scatters = scatterDielectric(&material, &r, &scattered, &hitRec, &attenuation);
+        }
+
+        // radiance += emission * throughput;
+        if (scatters) {
+          radiance += 0.01 * throughput;
         } else {
+          radiance += 0 * throughput;
           break;
         }
+        
+        r = scattered;
+
+        throughput *= attenuation;
+      } else {
+        let unit_direction =  normalize(r.direction);
+        let a = 0.5*(unit_direction.y + 1.0);
+        let skyColor = (1.0-a)*vec3f(1.0, 1.0, 1.0) + a*vec3f(0.5, 0.7, 1.0);
+        radiance += skyColor * throughput;
+        break;
       }
     }
 
     color += radiance;
 
     let weight = 1.0 / f32(commonUniforms.frameCounter + 1);
-    let prevColor = raytraceImageBuffer[idx];
+    var prevColor = vec3f(0);
+    if (commonUniforms.frameCounter == 0) {
+      raytraceImageBuffer[idx] = prevColor;
+    } else {
+      prevColor = raytraceImageBuffer[idx];
+    }
+    
     raytraceImageBuffer[idx] = (1.0 - weight) * prevColor + weight * color;
-
-    // textureStore(raytracedTexture, pos, vec4(color, 1));
   }
 `;
