@@ -2,11 +2,6 @@ import { wgsl } from "wgsl-preprocessor/wgsl-preprocessor.js";
 
 export default wgsl/* wgsl */ `
   @must_use
-  fn lengthSquared(vec: vec3f) -> f32 {
-    return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z;
-  }
-
-  @must_use
   fn randomVec3() -> vec3f {
     return vec3f(rand(), rand(), rand());
   }
@@ -21,7 +16,7 @@ export default wgsl/* wgsl */ `
     var out: vec3f;
     while(true) {
       let v = randomVec3InRange(-1, 1);
-      if (lengthSquared(v) < 1) {
+      if (dot(v, v) < 1) {
         out = v;
         break;
       }

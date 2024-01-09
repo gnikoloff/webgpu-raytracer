@@ -20,12 +20,6 @@ export default wgsl/* wgsl */ `
     (*recordPtr).normal = select(-outwardNormal, outwardNormal, frontFace);
   }
 
-  struct Sphere {
-    center: vec3f,
-    radius: f32,
-    materialIdx: u32,
-  };
-
   @must_use
   fn sphereHit(
     spherePtr: ptr<function, Sphere>,

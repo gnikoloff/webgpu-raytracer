@@ -6,18 +6,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>WebGPU Raytracer</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-    }
-
     body {
       overflow: hidden;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    }
+
+    #header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      padding: 1rem;
+    }
+
+    #header h1 {
+      margin: 0;
     }
   </style>
 </head>
 
 <body>
+
+  <header id="header">
+    <h1>WebGPU Raytracer</h1>
+  </header>
 
   <script type="module" src="src/index.ts"></script>
 

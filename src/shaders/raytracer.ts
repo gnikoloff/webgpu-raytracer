@@ -10,19 +10,16 @@ import CameraShaderChunk from "./utils/camera";
 import CameraHelpersShaderChunk from "./utils/camera-helpers";
 import ColorShaderChunk from "./utils/color";
 import MaterialShaderChunk from "./utils/material";
+import ShapeShaderChunk from "./utils/shape";
 
 export default wgsl/* wgsl */ `
-
-  @group(0) @binding(0) var<storage, read_write> raytraceImageBuffer: array<vec3f>;
-  @group(0) @binding(1) var<uniform> commonUniforms: CommonUniforms;
-  @group(0) @binding(2) var<uniform> cameraUniforms: Camera;
-
-  override workgroupSizeX: u32;
-  override workgroupSizeY: u32;
+  const BV_MAX_STACK_DEPTH = 16;
+  const EPSILON = 0.001;
 
   ${UtilsShaderChunk}
   ${CommonShaderChunk}
   ${RayShaderChunk}
+  ${ShapeShaderChunk}
   ${VecShaderChunk}
   ${HittableShaderChunk}
   ${IntervalShaderChunk}
@@ -30,6 +27,16 @@ export default wgsl/* wgsl */ `
   ${CameraHelpersShaderChunk}
   ${ColorShaderChunk}
   ${MaterialShaderChunk}
+
+  @group(0) @binding(0) var<storage, read_write> raytraceImageBuffer: array<vec3f>;
+  @group(0) @binding(1) var<uniform> commonUniforms: CommonUniforms;
+  @group(0) @binding(2) var<uniform> cameraUniforms: Camera;
+
+  @group(1) @binding(0) var<storage, read> faces: array<Face>;
+  @group(1) @binding(1) var<storage, read> AABBs: array<AABB>;
+
+  override workgroupSizeX: u32;
+  override workgroupSizeY: u32;
 
   @compute @workgroup_size(workgroupSizeX, workgroupSizeY)
   fn main(@builtin(global_invocation_id) globalInvocationId : vec3<u32>,) {
@@ -67,11 +74,13 @@ export default wgsl/* wgsl */ `
 
     var throughput = vec3f(1);
 
+    var a = faces[0];
+    var b = AABBs[0];
+
     var radiance = vec3f(0);
     var r = getCameraRay(&camera, x, y);
-    for (var rayBounce = 0u; rayBounce < commonUniforms.maxBounces; rayBounce++) {
-      if (spheresHit(&r, &hitRec, Interval(0.001, f32max), spheres)) {
-
+    for (var rayBounce = 0u; rayBounce < commonUniforms.maxBounces; rayBounce++) { 
+      if (rayIntersectBVH(&r, &hitRec, positiveUniverseInterval)) {
         var scattered: Ray;
         var attenuation: vec3f;
         var material = materials[hitRec.materialIdx];

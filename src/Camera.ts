@@ -1,4 +1,4 @@
-type Vec3 = [number, number, number];
+import { mat4, vec3 } from "gl-matrix";
 
 const clamp = (x: number, min = 0, max = 1) => Math.min(Math.max(x, min), max);
 
@@ -29,7 +29,12 @@ class DampedAction {
 }
 
 export class Camera {
-	public target: Vec3 = [0, 0, -1];
+	public static readonly UP = vec3.fromValues(0, 1, 0);
+
+	public target = vec3.fromValues(0, 0, -1);
+	public viewProjectionMatrix = mat4.create();
+	public viewMatrix = mat4.create();
+	public projectionMatrix = mat4.create();
 
 	private rotateDelta = {
 		x: Infinity,
@@ -56,7 +61,12 @@ export class Camera {
 	private targetPhiDampedAction = new DampedAction();
 	private targetRadiusDampedAction = new DampedAction();
 
-	constructor(private domElement: HTMLElement, public position: Vec3) {
+	constructor(
+		private domElement: HTMLElement,
+		public position: vec3,
+		public vfov: number,
+		public aspectRatio: number,
+	) {
 		const dx = position[0];
 		const dy = position[1];
 		const dz = position[2];
@@ -127,5 +137,9 @@ export class Camera {
 		this.position[0] = sinPhiRadius * Math.sin(s.theta) + this.target[0];
 		this.position[1] = Math.cos(s.phi) * s.radius + this.target[1];
 		this.position[2] = sinPhiRadius * Math.cos(s.theta) + this.target[2];
+
+		mat4.lookAt(this.viewMatrix, this.position, this.target, Camera.UP);
+		mat4.perspective(this.projectionMatrix, 45, this.aspectRatio, 0.1, 100);
+		mat4.mul(this.viewProjectionMatrix, this.projectionMatrix, this.viewMatrix);
 	}
 }

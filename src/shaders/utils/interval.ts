@@ -30,4 +30,5 @@ export default wgsl/* wgsl */ `
 
   const emptyInterval = Interval(f32max, f32min);
   const universeInterval = Interval(f32min, f32max);
+  const positiveUniverseInterval = Interval(EPSILON, f32max);
 `;

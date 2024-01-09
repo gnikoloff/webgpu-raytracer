@@ -1,10 +1,14 @@
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 
+import { Camera } from "./Camera";
+import { Scene } from "./Scene";
+
 import CameraShaderChunk from "./shaders/utils/camera";
 import CommonShaderChunk from "./shaders/utils/common";
 import presentShaderSrc from "./shaders/present";
 import raytracerShaderSrc from "./shaders/raytracer";
-import { Camera } from "./Camera";
+import debugBVHShaderSrc from "./shaders/debug-bvh";
+import { vec3 } from "gl-matrix";
 
 const COMPUTE_WORKGROUP_SIZE_X = 16;
 const COMPUTE_WORKGROUP_SIZE_Y = 16;
@@ -27,21 +31,46 @@ context.configure({
 	alphaMode: "premultiplied",
 });
 
-const camera = new Camera(canvas, [-2, 2, 1]);
+const camera = new Camera(
+	canvas,
+	vec3.fromValues(-2, 2, 1),
+	60,
+	canvas.width / canvas.height,
+);
+const scene = new Scene(device);
 
-// Set up compute and present pipelines
-const drawPipeline = device.createRenderPipeline({
+const renderPassDescriptor: GPURenderPassDescriptor = {
+	colorAttachments: [
+		{
+			view: null,
+			clearValue: { r: 0, g: 0, b: 0, a: 1 },
+			loadOp: "clear",
+			storeOp: "store",
+		},
+	],
+};
+
+await scene.loadModels();
+
+// Set up compute, debug and present pipelines
+const blitScreenShaderModule = device.createShaderModule({
+	code: presentShaderSrc,
+});
+const debugBVHShaderModule = device.createShaderModule({
+	code: debugBVHShaderSrc,
+});
+const raytraceShaderModule = device.createShaderModule({
+	code: raytracerShaderSrc,
+});
+
+const blitToScreenPipeline = device.createRenderPipeline({
 	layout: "auto",
 	vertex: {
-		module: device.createShaderModule({
-			code: presentShaderSrc,
-		}),
+		module: blitScreenShaderModule,
 		entryPoint: "vertexMain",
 	},
 	fragment: {
-		module: device.createShaderModule({
-			code: presentShaderSrc,
-		}),
+		module: blitScreenShaderModule,
 		entryPoint: "fragmentMain",
 		targets: [
 			{
@@ -55,12 +84,40 @@ const drawPipeline = device.createRenderPipeline({
 	},
 });
 
+const debugBVHPipeline = device.createRenderPipeline({
+	layout: "auto",
+	vertex: {
+		module: debugBVHShaderModule,
+		entryPoint: "vertexMain",
+	},
+	fragment: {
+		module: debugBVHShaderModule,
+		entryPoint: "fragmentMain",
+		targets: [
+			{
+				format: presentationFormat,
+				blend: {
+					color: {
+						srcFactor: "one",
+						dstFactor: "one-minus-src-alpha",
+					},
+					alpha: {
+						srcFactor: "one",
+						dstFactor: "one-minus-src-alpha",
+					},
+				},
+			},
+		],
+	},
+	primitive: {
+		topology: "line-list",
+	},
+});
+
 const computePipeline = device.createComputePipeline({
 	layout: "auto",
 	compute: {
-		module: device.createShaderModule({
-			code: raytracerShaderSrc,
-		}),
+		module: raytraceShaderModule,
 		entryPoint: "main",
 		constants: {
 			workgroupSizeX: COMPUTE_WORKGROUP_SIZE_X,
@@ -94,17 +151,22 @@ const cameraUniformBuffer = device.createBuffer({
 cameraUniformValues.set({
 	viewportSize: [canvas.width, canvas.height],
 	imageWidth: canvas.width,
-	aspectRatio: canvas.width / canvas.height,
-	vfov: 40,
-	lookFrom: [-2, 2, 1],
-	lookAt: [0, 0, -1],
+	aspectRatio: camera.aspectRatio,
+	vfov: camera.vfov,
+	lookFrom: [0, 0, 2],
+	lookAt: [0, 0, 0],
 	vup: [0, 1, 0],
-	defocusAngle: 3,
+	defocusAngle: 0,
 	focusDist: 3.4,
 });
 
+const cameraViewProjMatrixBuffer = device.createBuffer({
+	size: 16 * Float32Array.BYTES_PER_ELEMENT,
+	usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+});
+
 const showResultBindGroup = device.createBindGroup({
-	layout: drawPipeline.getBindGroupLayout(0),
+	layout: blitToScreenPipeline.getBindGroupLayout(0),
 	entries: [
 		{
 			binding: 0,
@@ -116,6 +178,24 @@ const showResultBindGroup = device.createBindGroup({
 			binding: 1,
 			resource: {
 				buffer: cameraUniformBuffer,
+			},
+		},
+	],
+});
+
+const debugBVHBindGroup = device.createBindGroup({
+	layout: debugBVHPipeline.getBindGroupLayout(0),
+	entries: [
+		{
+			binding: 0,
+			resource: {
+				buffer: scene.aabbsBuffer,
+			},
+		},
+		{
+			binding: 1,
+			resource: {
+				buffer: cameraViewProjMatrixBuffer,
 			},
 		},
 	],
@@ -144,6 +224,23 @@ const computeBindGroup0 = device.createBindGroup({
 		},
 	],
 });
+const computeBindGroup1 = device.createBindGroup({
+	layout: computePipeline.getBindGroupLayout(1),
+	entries: [
+		{
+			binding: 0,
+			resource: {
+				buffer: scene.facesBuffer,
+			},
+		},
+		{
+			binding: 1,
+			resource: {
+				buffer: scene.aabbsBuffer,
+			},
+		},
+	],
+});
 
 // Init app
 document.body.appendChild(canvas);
@@ -168,8 +265,8 @@ function onWheel() {
 	frameCounter = 0;
 }
 
-function drawFrame(ts) {
-	ts /= 1000;
+function drawFrame() {
+	requestAnimationFrame(drawFrame);
 
 	camera.tick();
 
@@ -198,12 +295,19 @@ function drawFrame(ts) {
 		cameraUniformValues.arrayBuffer,
 	);
 
+	device.queue.writeBuffer(
+		cameraViewProjMatrixBuffer,
+		0,
+		camera.viewProjectionMatrix,
+	);
+
 	const commandEncoder = device.createCommandEncoder();
 
 	// raytrace
 	const computePass = commandEncoder.beginComputePass();
-	computePass.setBindGroup(0, computeBindGroup0);
 	computePass.setPipeline(computePipeline);
+	computePass.setBindGroup(0, computeBindGroup0);
+	computePass.setBindGroup(1, computeBindGroup1);
 	computePass.dispatchWorkgroups(
 		Math.ceil(canvas.width / COMPUTE_WORKGROUP_SIZE_X),
 		Math.ceil(canvas.height / COMPUTE_WORKGROUP_SIZE_Y),
@@ -211,29 +315,25 @@ function drawFrame(ts) {
 	);
 	computePass.end();
 
-	// blit to screen
-	const textureView = context.getCurrentTexture().createView();
-	const renderPassDescriptor: GPURenderPassDescriptor = {
-		colorAttachments: [
-			{
-				view: textureView,
-				clearValue: { r: 0, g: 0, b: 0, a: 1 },
-				loadOp: "clear",
-				storeOp: "store",
-			},
-		],
-	};
+	renderPassDescriptor.colorAttachments[0].view = context
+		.getCurrentTexture()
+		.createView();
 	const renderPass = commandEncoder.beginRenderPass(renderPassDescriptor);
-	renderPass.setBindGroup(0, showResultBindGroup);
-	renderPass.setPipeline(drawPipeline);
-	renderPass.draw(6);
-	renderPass.end();
 
+	// blit to screen
+	renderPass.setPipeline(blitToScreenPipeline);
+	renderPass.setBindGroup(0, showResultBindGroup);
+	renderPass.draw(6);
+
+	// debug BVH
+	renderPass.setPipeline(debugBVHPipeline);
+	renderPass.setBindGroup(0, debugBVHBindGroup);
+	renderPass.draw(2, Scene.AABBS_COUNT * 12);
+
+	renderPass.end();
 	device.queue.submit([commandEncoder.finish()]);
 
 	frameCounter++;
-
-	requestAnimationFrame(drawFrame);
 }
 
 function resize() {
