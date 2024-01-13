@@ -28,6 +28,8 @@ class DampedAction {
 	}
 }
 
+type CameraState = "rotate" | "pan";
+
 export class Camera {
 	public static readonly UP = vec3.fromValues(0, 1, 0);
 
@@ -36,17 +38,31 @@ export class Camera {
 	public viewMatrix = mat4.create();
 	public projectionMatrix = mat4.create();
 
+	private state: CameraState = "rotate";
+
 	private rotateDelta = {
-		x: Infinity,
-		y: Infinity,
+		x: 0,
+		y: 0,
 	};
 	private rotateStart = {
-		x: Infinity,
-		y: Infinity,
+		x: 0,
+		y: 0,
 	};
 	private rotateEnd = {
-		x: Infinity,
-		y: Infinity,
+		x: 0,
+		y: 0,
+	};
+	private panStart = {
+		x: 0,
+		y: 0,
+	};
+	private panDelta = {
+		x: 0,
+		y: 0,
+	};
+	private panEnd = {
+		x: 0,
+		y: 0,
 	};
 	private spherical = {
 		radius: 0,
@@ -79,7 +95,10 @@ export class Camera {
 
 		this.domElement.addEventListener("mousedown", this.onMouseDown);
 		this.domElement.addEventListener("mouseup", this.onMouseUp);
-		this.domElement.addEventListener("wheel", this.onMouseWheel);
+		this.domElement.addEventListener("wheel", this.onMouseWheel, {
+			passive: true,
+		});
+		this.domElement.addEventListener("contextmenu", this.onContextMenu);
 	}
 
 	public tick() {
@@ -88,24 +107,63 @@ export class Camera {
 	}
 
 	private onMouseDown = (e: MouseEvent) => {
-		this.rotateStart.x = e.pageX;
-		this.rotateStart.y = e.pageY;
+		if (e.button === 0) {
+			this.state = "rotate";
+			this.rotateStart.x = e.pageX;
+			this.rotateStart.y = e.pageY;
+		} else {
+			this.state = "pan";
+			this.panStart.x = e.pageX;
+			this.panStart.y = e.pageY;
+		}
 
 		this.domElement.addEventListener("mousemove", this.onMouseMove);
 	};
 
 	private onMouseMove = (e: MouseEvent) => {
-		this.rotateEnd.x = e.pageX;
-		this.rotateEnd.y = e.pageY;
+		if (this.state === "rotate") {
+			this.rotateEnd.x = e.pageX;
+			this.rotateEnd.y = e.pageY;
 
-		this.rotateDelta.x = this.rotateEnd.x - this.rotateStart.x;
-		this.rotateDelta.y = this.rotateEnd.y - this.rotateStart.y;
+			this.rotateDelta.x = this.rotateEnd.x - this.rotateStart.x;
+			this.rotateDelta.y = this.rotateEnd.y - this.rotateStart.y;
 
-		this.targetThetaDampedAction.addForce(-this.rotateDelta.x / innerWidth);
-		this.targetPhiDampedAction.addForce(-this.rotateDelta.y / innerHeight);
+			this.targetThetaDampedAction.addForce(-this.rotateDelta.x / innerWidth);
+			this.targetPhiDampedAction.addForce(-this.rotateDelta.y / innerHeight);
 
-		this.rotateStart.x = this.rotateEnd.x;
-		this.rotateStart.y = this.rotateEnd.y;
+			this.rotateStart.x = this.rotateEnd.x;
+			this.rotateStart.y = this.rotateEnd.y;
+		} else {
+			this.panEnd.x = e.pageX;
+			this.panEnd.y = e.pageY;
+			this.panDelta.x = -0.5 * (this.panEnd.x - this.panStart.x);
+			this.panDelta.y = 0.5 * (this.panEnd.y - this.panStart.y);
+			this.panStart.x = this.panEnd.x;
+			this.panStart.y = this.panEnd.y;
+
+			const xDir = vec3.create();
+			const yDir = vec3.create();
+			const zDir = vec3.create();
+			zDir[0] = this.target[0] - this.position[0];
+			zDir[1] = this.target[1] - this.position[1];
+			zDir[2] = this.target[2] - this.position[2];
+			vec3.normalize(zDir, zDir);
+
+			vec3.cross(xDir, zDir, [0, 1, 0]);
+			vec3.cross(yDir, xDir, zDir);
+
+			const scale = Math.max(this.spherical.radius / 2000, 0.001);
+
+			this.targetXDampedAction.addForce(
+				(xDir[0] * this.panDelta.x + yDir[0] * this.panDelta.y) * scale,
+			);
+			this.targetYDampedAction.addForce(
+				(xDir[1] * this.panDelta.x + yDir[1] * this.panDelta.y) * scale,
+			);
+			this.targetZDampedAction.addForce(
+				(xDir[2] * this.panDelta.x + yDir[2] * this.panDelta.y) * scale,
+			);
+		}
 	};
 
 	private onMouseUp = (e: MouseEvent) => {
@@ -119,6 +177,10 @@ export class Camera {
 		} else {
 			this.targetRadiusDampedAction.addForce(-force);
 		}
+	};
+
+	private onContextMenu = (e: PointerEvent) => {
+		e.preventDefault();
 	};
 
 	private updateDampedAction() {

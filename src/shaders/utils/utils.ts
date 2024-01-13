@@ -6,29 +6,23 @@ export default wgsl/* wgsl */ `
 
   const pi = ${Math.PI};
 
-  // A psuedo random number. Initialized with init_rand(), updated with rand().
-  var<private> rnd : vec3u;
-
-  // Initializes the random number generator.
-  fn init_rand(invocation_id : vec3u) {
-    const A = vec3(1741651 * 1009,
-                  140893  * 1609 * 13,
-                  6521    * 983  * 7 * 2);
-    rnd = (invocation_id * A) ^ commonUniforms.seed;
-  }
-
-  // Returns a random number between 0 and 1.
   @must_use
-  fn rand() -> f32 {
-    const C = vec3(60493  * 9377,
-                  11279  * 2539 * 23,
-                  7919   * 631  * 5 * 3);
-
-    rnd = (rnd * C) ^ (rnd.yzx >> vec3(4u));
-    return f32(rnd.x ^ rnd.y) / 4294967295.0; // 4294967295.0 is f32(0xffffffff). See #337
+  fn rngNextFloat(state: ptr<function, u32>) -> f32 {
+    rngNextInt(state);
+    return f32(*state) / f32(0xffffffffu);
   }
 
-  fn randInRange(min: f32, max: f32) -> f32 {
-    return min + rand() * (max - min);
+  fn rngNextInt(state: ptr<function, u32>) {
+    // PCG random number generator
+    // Based on https://www.shadertoy.com/view/XlGcRh
+
+    let oldState = *state + 747796405u + 2891336453u;
+    let word = ((oldState >> ((oldState >> 28u) + 4u)) ^ oldState) * 277803737u;
+    *state = (word >> 22u) ^ word;
+  }
+
+  @must_use
+  fn randInRange(min: f32, max: f32, state: ptr<function, u32>) -> f32 {
+    return min + rngNextFloat(state) * (max - min);
   }
 `;

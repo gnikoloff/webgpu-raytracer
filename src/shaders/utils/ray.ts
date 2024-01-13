@@ -20,6 +20,12 @@ export default wgsl/* wgsl */ `
   ) -> bool {
     // Mäller-Trumbore algorithm
     // https://en.wikipedia.org/wiki/Möller–Trumbore_intersection_algorithm
+
+    // let fnDotRayDir = dot((*face).faceNormal, (*ray).direction);
+    // if (abs(fnDotRayDir) < EPSILON) {
+    //   return false; // ray direction almost parallel
+    // }
+
     let e1 = (*face).p1 - (*face).p0;
     let e2 = (*face).p2 - (*face).p0;
 
@@ -49,16 +55,19 @@ export default wgsl/* wgsl */ `
 
     if t > interval.min && t < interval.max {
       // https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection.html
-      // e1 = v1 - v0
-      // e2 = v2 - v0
-      // -> p = v0 + u * e1 + v * e2
+      
       let p = (*face).p0 + u * e1 + v * e2;
-      let n = normalize(cross(e1, e2));
-      // let barycentric = vec3f(1f - u - v, u, v);
       // *hit = TriangleHit(offsetRay(p, n), b, t);
       (*rec).t = t;
       (*rec).p = p;
-      (*rec).materialIdx = 1;
+      (*rec).materialIdx = (*face).materialIdx;
+      if (commonUniforms.flatShading == 1u) {
+        (*rec).normal = (*face).faceNormal;
+      } else {
+        let b = vec3f(1f - u - v, u, v);
+        let n = b[0] * (*face).n0 + b[1] * (*face).n1 + b[2] * (*face).n2;
+        (*rec).normal = n;
+      }
       return true;
     } else {
       return false;
@@ -89,47 +98,85 @@ export default wgsl/* wgsl */ `
     var stack: array<i32, BV_MAX_STACK_DEPTH>;
 
     (*hitRec).t = f32max;
+    
+    var top: i32;
 
-    var top = 0;
-    stack[0] = 0;
-    while (top > -1) {
-      var bvIdx = stack[top];
-      var aabb = AABBs[bvIdx];
-      top -= 1;
-      
-      if (rayIntersectBV(ray, &aabb)) {
-        if (aabb.leftChildIdx != -1) {
-          top += 1;
-          stack[top] = aabb.leftChildIdx;
-        }
-        if (aabb.rightChildIdx != -1) {
-          top += 1;
-          stack[top] = aabb.rightChildIdx;
-        }
+    for (var objIdx = 0u; objIdx < OBJECTS_COUNT_IN_SCENE; objIdx++) {
+      top = 0;
+      stack[0] = 0;
 
-        if (aabb.faceIdx0 != -1) {
-          var face = faces[aabb.faceIdx0];
-          if (
-            rayIntersectFace(ray, &face, &current, positiveUniverseInterval) &&
-            current.t < (*hitRec).t
-          ) {
-            *hitRec = current;
-            didIntersect = true;
+      while (top > -1) {
+        var bvIdx = stack[top];
+        top--;
+        var aabb = AABBs[u32(bvIdx) + objIdx * MAX_BVs_COUNT_PER_MESH];
+        
+        if (rayIntersectBV(ray, &aabb)) {
+          if (aabb.leftChildIdx != -1) {
+            top++;
+            stack[top] = aabb.leftChildIdx;
           }
-        }
+          if (aabb.rightChildIdx != -1) {
+            top++;
+            stack[top] = aabb.rightChildIdx;
+          }
 
-        if (aabb.faceIdx1 != -1) {
-          var face = faces[aabb.faceIdx1];
-          if (
-            rayIntersectFace(ray, &face, &current, positiveUniverseInterval) &&
-            current.t < (*hitRec).t
-          ) {
-            *hitRec = current;
-            didIntersect = true;
+          if (aabb.faceIdx0 != -1) {
+            var face = faces[u32(aabb.faceIdx0) + objIdx * MAX_FACES_COUNT_PER_MESH];
+            if (
+              rayIntersectFace(ray, &face, &current, positiveUniverseInterval) &&
+              current.t < (*hitRec).t
+            ) {
+              *hitRec = current;
+              didIntersect = true;
+            }
+          }
+
+          if (aabb.faceIdx1 != -1) {
+            var face = faces[u32(aabb.faceIdx1) + objIdx * MAX_FACES_COUNT_PER_MESH];
+            if (
+              rayIntersectFace(ray, &face, &current, positiveUniverseInterval) &&
+              current.t < (*hitRec).t
+            ) {
+              *hitRec = current;
+              didIntersect = true;
+            }
           }
         }
       }
     }
     return didIntersect;
+  }
+
+  @must_use
+  fn getCameraRay(camera: ptr<function, Camera>, i: f32, j: f32, rngState: ptr<function, u32>) -> Ray {
+    let pixelCenter = (*camera).pixel00Loc + (i * (*camera).pixelDeltaU) + (j * (*camera).pixelDeltaV);
+    let pixelSample = pixelCenter + pixelSampleSquare(camera, rngState);
+    let rayOrigin = select(defocusDiskSample(camera, rngState), (*camera).center, (*camera).defocusAngle <= 0);
+    let rayDirection = pixelSample - rayOrigin;
+    return Ray(rayOrigin, rayDirection);
+  }
+
+  @must_use
+  fn defocusDiskSample(camera: ptr<function, Camera>, rngState: ptr<function, u32>) -> vec3f {
+    let p = randomVec3InUnitDisc(rngState);
+    return (*camera).center + (p.x * (*camera).defocusDiscU) + (p.y * (*camera).defocusDiscV);
+  }
+
+  @must_use
+  fn pixelSampleSquare(camera: ptr<function, Camera>, rngState: ptr<function, u32>) -> vec3<f32> {
+    let px = -0.5 + rngNextFloat(rngState);
+    let py = -0.5 + rngNextFloat(rngState);
+    return (px * (*camera).pixelDeltaU) + (py * (*camera).pixelDeltaV);
+  }
+
+  @must_use
+  fn rayColor(ray: ptr<function, Ray>, spheres: array<Sphere, 5>) -> vec3f {
+    var rec: HitRecord;
+    if (spheresHit(ray, &rec, Interval(0, f32max), spheres)) {
+      return 0.5 * (rec.normal + vec3f(1.0, 1.0, 1.0));
+    }
+    let unitDirection = normalize((*ray).direction);
+    let a = 0.5 * (unitDirection.y + 1.0);
+    return (1.0-a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
   }
 `;

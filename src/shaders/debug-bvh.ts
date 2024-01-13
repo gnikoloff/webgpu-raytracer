@@ -78,7 +78,7 @@ export default wgsl/* wgsl */ `
 
   @fragment
   fn fragmentMain() -> @location(0) vec4f {
-    return vec4f(0.1);
+    return vec4f(0.01);
   }
 
 `;

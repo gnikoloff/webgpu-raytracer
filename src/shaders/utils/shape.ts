@@ -2,15 +2,16 @@ import { wgsl } from "wgsl-preprocessor/wgsl-preprocessor.js";
 
 export default wgsl/* wgsl */ `
   struct Face {
-    p0: vec3f, // 0
-    p1: vec3f, // 4
-    p2: vec3f, // 8
+    p0: vec3f,
+    p1: vec3f,
+    p2: vec3f,
 
-    n0: vec3f, // 12
-    n1: vec3f, // 16
-    n2: vec3f, // 20
+    n0: vec3f,
+    n1: vec3f,
+    n2: vec3f,
 
-    faceNormal: vec3f // 24
+    faceNormal: vec3f,
+    materialIdx: u32
   }
 
   struct AABB {
@@ -22,9 +23,14 @@ export default wgsl/* wgsl */ `
     faceIdx1: i32
   }
 
+  struct Mesh {
+    aabbOffset: i32,
+    faceOffset: i32
+  }
+
   struct Sphere {
     center: vec3f,
     radius: f32,
     materialIdx: u32,
-  };
+  }
 `;

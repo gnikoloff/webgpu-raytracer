@@ -23,4 +23,33 @@ export default wgsl/* wgsl */ `
     defocusDiscU: vec3f,
     defocusDiscV: vec3f
   }
+
+  fn initCamera(camera: ptr<function, Camera>) {
+    (*camera).imageHeight = (*camera).imageWidth / (*camera).aspectRatio;
+    (*camera).imageHeight = select((*camera).imageHeight, 1, (*camera).imageHeight < 1);
+
+    (*camera).center = (*camera).lookFrom;
+
+    let theta = radians((*camera).vfov);
+    let h = tan(theta * 0.5);
+    let viewportHeight = 2.0 * h * (*camera).focusDist;
+    let viewportWidth = viewportHeight * ((*camera).imageWidth / (*camera).imageHeight);
+
+    let w = normalize((*camera).lookFrom - (*camera).lookAt);
+    let u = normalize(cross((*camera).vup, w));
+    let v = cross(w, u);
+
+    let viewportU = viewportWidth * u;
+    let viewportV = viewportHeight * -v;
+
+    (*camera).pixelDeltaU = viewportU / (*camera).imageWidth;
+    (*camera).pixelDeltaV = viewportV / (*camera).imageHeight;
+
+    let viewportUpperLeft = (*camera).center - ((*camera).focusDist * w) - viewportU / 2 - viewportV / 2;
+    (*camera).pixel00Loc = viewportUpperLeft + 0.5 * ((*camera).pixelDeltaU + (*camera).pixelDeltaV);
+
+    let defocusRadius = (*camera).focusDist * tan(radians((*camera).defocusAngle * 0.5));
+    (*camera).defocusDiscU = u * defocusRadius;
+    (*camera).defocusDiscV = v * defocusRadius;
+  }
 `;

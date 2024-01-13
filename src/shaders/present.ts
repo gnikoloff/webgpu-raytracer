@@ -1,6 +1,7 @@
 import { wgsl } from "wgsl-preprocessor/wgsl-preprocessor.js";
 
 import CameraShaderChunk from "./utils/camera";
+import CommonShaderChunk from "./utils/common";
 import ColorShaderChunk from "./utils/color";
 import VertexShaderChunk from "./utils/vertex";
 
@@ -8,9 +9,11 @@ export default wgsl/* wgsl */ `
   ${CameraShaderChunk}
   ${ColorShaderChunk}
   ${VertexShaderChunk}
+  ${CommonShaderChunk}
 
   @group(0) @binding(0) var<storage, read_write> raytraceImageBuffer: array<vec3f>;
   @group(0) @binding(1) var<uniform> cameraUniforms: Camera;
+  @group(0) @binding(2) var<uniform> commonUniforms: CommonUniforms;
 
   // xy pos + uv
   const FULLSCREEN_QUAD = array<vec4<f32>, 6>(
@@ -35,8 +38,8 @@ export default wgsl/* wgsl */ `
     let x = u32(uv.x * f32(cameraUniforms.viewportSize.x));
     let y = u32(uv.y * f32(cameraUniforms.viewportSize.y));
     let idx = x + y * cameraUniforms.viewportSize.x;
-    var color = raytraceImageBuffer[idx];
-    color = lottes(color);
+    var color = raytraceImageBuffer[idx] / f32(commonUniforms.frameCounter + 1);
+    // color = lottes(color);
     return vec4f(color, 1.0);
   }
 `;

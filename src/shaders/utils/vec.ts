@@ -2,49 +2,49 @@ import { wgsl } from "wgsl-preprocessor/wgsl-preprocessor.js";
 
 export default wgsl/* wgsl */ `
   @must_use
-  fn randomVec3() -> vec3f {
-    return vec3f(rand(), rand(), rand());
+  fn randomVec3(rngState: ptr<function, u32>) -> vec3f {
+    return vec3f(rngNextFloat(rngState), rngNextFloat(rngState), rngNextFloat(rngState));
   }
   
   @must_use
-  fn randomVec3InRange(min: f32, max: f32) -> vec3f {
-    return vec3f(randInRange(min, max), randInRange(min, max), randInRange(min, max));
+  fn randomVec3InRange(min: f32, max: f32, rngState: ptr<function, u32>) -> vec3f {
+    return vec3f(
+      randInRange(min, max, rngState),
+      randInRange(min, max, rngState),
+      randInRange(min, max, rngState)
+    );
   }
   
-  @must_use
-  fn randomVec3InUnitSphere() -> vec3f {
-    var out: vec3f;
-    while(true) {
-      let v = randomVec3InRange(-1, 1);
-      if (dot(v, v) < 1) {
-        out = v;
-        break;
-      }
-    }
-    return out;
+  fn randomVec3InUnitDisc(state: ptr<function, u32>) -> vec3<f32> {
+    let r = sqrt(rngNextFloat(state));
+    let alpha = 2f * pi * rngNextFloat(state);
+
+    let x = r * cos(alpha);
+    let y = r * sin(alpha);
+
+    return vec3(x, y, 0f);
   }
 
-  @must_use
-  fn randomVec3InUnitDisc() -> vec3f {
-    var out: vec3f;
-    while(true) {
-      let p = vec3f(randInRange(-1, 1), randInRange(-1, 1), 0);
-      if (dot(p, p) < 1) {
-        out = p;
-        break;
-      }
-    }
-    return out;
+  fn randomVec3InUnitSphere(state: ptr<function, u32>) -> vec3<f32> {
+    let r = pow(rngNextFloat(state), 0.33333f);
+    let theta = pi * rngNextFloat(state);
+    let phi = 2f * pi * rngNextFloat(state);
+
+    let x = r * sin(theta) * cos(phi);
+    let y = r * sin(theta) * sin(phi);
+    let z = r * cos(theta);
+
+    return vec3(x, y, z);
   }
   
   @must_use
-  fn randomUnitVec3() -> vec3f {
-    return normalize(randomVec3InUnitSphere());
+  fn randomUnitVec3(rngState: ptr<function, u32>) -> vec3f {
+    return normalize(randomVec3InUnitSphere(rngState));
   }
   
   @must_use
-  fn randomUnitVec3OnHemisphere(normal: vec3f) -> vec3f {
-    let onUnitSphere = randomUnitVec3();
+  fn randomUnitVec3OnHemisphere(normal: vec3f, rngState: ptr<function, u32>) -> vec3f {
+    let onUnitSphere = randomUnitVec3(rngState);
     return select(-onUnitSphere, onUnitSphere, dot(onUnitSphere, normal) > 0.0);
   }
 

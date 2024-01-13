@@ -1,3 +1,4 @@
+import * as dat from "dat.gui";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 
 import { Camera } from "./Camera";
@@ -9,15 +10,46 @@ import presentShaderSrc from "./shaders/present";
 import raytracerShaderSrc from "./shaders/raytracer";
 import debugBVHShaderSrc from "./shaders/debug-bvh";
 import { vec3 } from "gl-matrix";
+import { Material } from "./Material";
 
 const COMPUTE_WORKGROUP_SIZE_X = 16;
 const COMPUTE_WORKGROUP_SIZE_Y = 16;
+const MAX_BOUNCES_INTERACTING = 3;
 
 const shaderSeed = [Math.random(), Math.random(), Math.random()];
 let frameCounter = 0;
+let maxBounces = 16;
+let flatShading = 0;
+
+const $frameCounter = document.getElementById("frame-count");
+const $progress = document.getElementById("progress");
+const $progresPercent = document.getElementById("progress-percent");
+
+// GUI
+const guiSettings = {
+	"Max Samples": 10000,
+	"Ray Bounces Count": maxBounces,
+	"Debug BVH": false,
+	"Use Phong Shading": true,
+};
+const gui = new dat.GUI();
+gui.width = 400;
+gui.add(guiSettings, "Debug BVH");
+gui.add(guiSettings, "Ray Bounces Count", 1, 16, 1).onChange((v) => {
+	frameCounter = 0;
+	maxBounces = v;
+});
+gui.add(guiSettings, "Max Samples", 1, 10000, 5).onChange((v) => {
+	frameCounter = 0;
+});
+gui.add(guiSettings, "Use Phong Shading").onChange((v) => {
+	flatShading = v ? 0 : 1;
+	frameCounter = 0;
+});
 
 // Set canvas and GPU device
 const canvas = document.createElement("canvas") as HTMLCanvasElement;
+canvas.setAttribute("id", "c");
 resize();
 const adapter = await navigator.gpu.requestAdapter();
 const device = await adapter.requestDevice({
@@ -33,7 +65,7 @@ context.configure({
 
 const camera = new Camera(
 	canvas,
-	vec3.fromValues(-2, 2, 1),
+	vec3.fromValues(0, 0, 3.5),
 	60,
 	canvas.width / canvas.height,
 );
@@ -120,8 +152,11 @@ const computePipeline = device.createComputePipeline({
 		module: raytraceShaderModule,
 		entryPoint: "main",
 		constants: {
-			workgroupSizeX: COMPUTE_WORKGROUP_SIZE_X,
-			workgroupSizeY: COMPUTE_WORKGROUP_SIZE_Y,
+			WORKGROUP_SIZE_X: COMPUTE_WORKGROUP_SIZE_X,
+			WORKGROUP_SIZE_Y: COMPUTE_WORKGROUP_SIZE_Y,
+			OBJECTS_COUNT_IN_SCENE: Scene.MODELS_COUNT,
+			MAX_BVs_COUNT_PER_MESH: Scene.MAX_NUM_BVs_PER_MESH,
+			MAX_FACES_COUNT_PER_MESH: Scene.MAX_NUM_FACES_PER_MESH,
 		},
 	},
 });
@@ -130,6 +165,17 @@ const raytracedStorageBuffer = device.createBuffer({
 	size: Float32Array.BYTES_PER_ELEMENT * 4 * canvas.width * canvas.height,
 	usage: GPUBufferUsage.STORAGE,
 });
+
+const rngStateBuffer = device.createBuffer({
+	size: Uint32Array.BYTES_PER_ELEMENT * canvas.width * canvas.height,
+	usage: GPUBufferUsage.STORAGE,
+	mappedAtCreation: true,
+});
+const rngState = new Uint32Array(rngStateBuffer.getMappedRange());
+for (let i = 0; i < canvas.width * canvas.height; i++) {
+	rngState[i] = i;
+}
+rngStateBuffer.unmap();
 
 // Set up common uniforms
 const commonShaderDefs = makeShaderDataDefinitions(CommonShaderChunk);
@@ -180,6 +226,12 @@ const showResultBindGroup = device.createBindGroup({
 				buffer: cameraUniformBuffer,
 			},
 		},
+		{
+			binding: 2,
+			resource: {
+				buffer: commonUniformsBuffer,
+			},
+		},
 	],
 });
 
@@ -213,11 +265,17 @@ const computeBindGroup0 = device.createBindGroup({
 		{
 			binding: 1,
 			resource: {
-				buffer: commonUniformsBuffer,
+				buffer: rngStateBuffer,
 			},
 		},
 		{
 			binding: 2,
+			resource: {
+				buffer: commonUniformsBuffer,
+			},
+		},
+		{
+			binding: 3,
 			resource: {
 				buffer: cameraUniformBuffer,
 			},
@@ -239,6 +297,12 @@ const computeBindGroup1 = device.createBindGroup({
 				buffer: scene.aabbsBuffer,
 			},
 		},
+		{
+			binding: 2,
+			resource: {
+				buffer: scene.materialsBuffer,
+			},
+		},
 	],
 });
 
@@ -246,10 +310,11 @@ const computeBindGroup1 = device.createBindGroup({
 document.body.appendChild(canvas);
 canvas.addEventListener("mousedown", onMouseDown);
 canvas.addEventListener("mouseup", onMouseUp);
-canvas.addEventListener("wheel", onWheel);
+canvas.addEventListener("wheel", onWheel, { passive: true });
 requestAnimationFrame(drawFrame);
 
 function onMouseDown(e: MouseEvent) {
+	maxBounces = MAX_BOUNCES_INTERACTING;
 	canvas.addEventListener("mousemove", onMouseMove);
 }
 
@@ -258,15 +323,28 @@ function onMouseMove(e: MouseEvent) {
 }
 
 function onMouseUp(e: MouseEvent) {
+	maxBounces = guiSettings["Ray Bounces Count"];
 	canvas.removeEventListener("mousemove", onMouseMove);
 }
 
 function onWheel() {
+	// maxBounces = MAX_BOUNCES_INTERACTING;
 	frameCounter = 0;
 }
 
 function drawFrame() {
 	requestAnimationFrame(drawFrame);
+
+	$frameCounter.textContent = frameCounter.toString();
+	const progresPercent = (frameCounter / guiSettings["Max Samples"]) * 100;
+	$progress.style.width = `${progresPercent}%`;
+	$progresPercent.className =
+		progresPercent < 5 ? "docked-left" : "docked-right";
+	$progresPercent.textContent = `${progresPercent.toFixed(0)}%`;
+
+	if (frameCounter === guiSettings["Max Samples"]) {
+		return;
+	}
 
 	camera.tick();
 
@@ -277,7 +355,8 @@ function drawFrame() {
 	commonUniformValues.set({
 		seed: shaderSeed,
 		frameCounter,
-		maxBounces: 10,
+		maxBounces,
+		flatShading,
 	});
 	device.queue.writeBuffer(
 		commonUniformsBuffer,
@@ -326,9 +405,11 @@ function drawFrame() {
 	renderPass.draw(6);
 
 	// debug BVH
-	renderPass.setPipeline(debugBVHPipeline);
-	renderPass.setBindGroup(0, debugBVHBindGroup);
-	renderPass.draw(2, Scene.AABBS_COUNT * 12);
+	if (guiSettings["Debug BVH"]) {
+		renderPass.setPipeline(debugBVHPipeline);
+		renderPass.setBindGroup(0, debugBVHBindGroup);
+		renderPass.draw(2, Scene.AABBS_COUNT * 12);
+	}
 
 	renderPass.end();
 	device.queue.submit([commandEncoder.finish()]);
@@ -337,8 +418,12 @@ function drawFrame() {
 }
 
 function resize() {
-	canvas.width = innerWidth; // * devicePixelRatio;
-	canvas.height = innerHeight; // * devicePixelRatio;
-	canvas.style.width = `${innerWidth}px`;
-	canvas.style.height = `${innerHeight}px`;
+	const w = Math.min(innerWidth, 1920);
+	const h = Math.min(innerHeight, 1080);
+	canvas.width = w; // * devicePixelRatio;
+	canvas.height = h; // * devicePixelRatio;
+	canvas.style.width = `${w}px`;
+	canvas.style.height = `${h}px`;
+	canvas.style.marginTop = `${-h * 0.5}px`;
+	canvas.style.marginLeft = `${-w * 0.5}px`;
 }

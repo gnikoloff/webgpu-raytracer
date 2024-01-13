@@ -11,4 +11,5 @@ export interface Face {
 
 	fn: vec3;
 	fi: number; // index into face array
+	mi: number; // index into the material
 }

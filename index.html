@@ -7,10 +7,23 @@
   <title>WebGPU Raytracer</title>
   <style>
     body {
+      font-size: 14px;
       overflow: hidden;
+      background: black;
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    }
+
+    a {
+      color: white;
+    }
+
+    #c {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      z-index: -1;
     }
 
     #header {
@@ -18,10 +31,51 @@
       top: 0;
       left: 0;
       padding: 1rem;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
     }
 
     #header h1 {
       margin: 0;
+      font-size: 18px;
+    }
+
+    #header h5 {
+      margin: 0.5rem 0 0 0;
+      font-weight: 400;
+      font-size: 14px;
+    }
+
+    #loader {
+      margin: 1rem 0 1.5rem 0;
+      background: rgba(255, 255, 255, 0.2);
+      width: 100%;
+      height: 2px;
+      position: relative;
+    }
+
+    #progress {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 100%;
+      background: white;
+    }
+
+    #progress-percent {
+      position: absolute;
+      bottom: -13px;
+      right: 0;
+      font-size: 9px;
+    }
+
+    #progress-percent.docked-left {
+      left: 0;
+    }
+
+    #progress-percent.docked-right {
+      right: 0;
     }
   </style>
 </head>
@@ -30,6 +84,11 @@
 
   <header id="header">
     <h1>WebGPU Raytracer</h1>
+    <h5>Code & info on Github. Made by <a target="_blank" href="https://georgi-nikolov.com/">Georgi Nikolov</a></h5>
+    <div id="loader">
+      <div id="progress"><span id="progress-percent"></span></div>
+    </div>
+    <p>Sample counter: <span id="frame-count"></span></p>
   </header>
 
   <script type="module" src="src/index.ts"></script>
