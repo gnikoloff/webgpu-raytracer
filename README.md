@@ -16,7 +16,7 @@ Warning! The app requires a reasonably powerful GPU. Your phone or tablet is pro
 
 ## Summary
 
-After doing rasterization for years, I was very intrigued by raytracing. After all, it is the holy grail of computer graphics, producing incredible photorealistic imagery with soft shadows, ambient occlusion and blurred reflections. This effects are difficult to achieve using a real-time 3D rasterizer but here you essentially get them for free with little to no rendering tricks involved.
+After doing rasterization for years, I was very intrigued by raytracing. After all, it is the holy grail of computer graphics, producing incredible photorealistic imagery with soft shadows, ambient occlusion and blurred reflections. These effects are difficult to achieve using a real-time 3D rasterizer but here you essentially get them for free with little to no rendering tricks involved.
 
 At the end of the day I ended up with what's called a path tracer. It requires a large quantity of rays to be fired through each pixel in a stochastic manner for convergence thus removing noise from the rendered image.
 
