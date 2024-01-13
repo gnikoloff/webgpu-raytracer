@@ -237,7 +237,7 @@ export class Scene {
 	public async loadModels() {
 		const [objFileContents, mtlFileContents] = await Promise.all([
 			Scene.loadObjFileContents("raytraced-scene.obj"),
-			Scene.loadMtlFileContents("raytraced-scene-real.mtl"),
+			Scene.loadMtlFileContents("raytraced-scene.mtl"),
 		]);
 
 		const sceneModels = Scene.parseModel(
