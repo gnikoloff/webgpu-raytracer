@@ -10,7 +10,7 @@ export class Material {
 
 	constructor(
 		public albedo: vec4,
-		public mtlType: MaterialType = Material.REFLECTIVE_MATERIAL,
+		public mtlType: MaterialType = Material.LAMBERTIAN_MATERIAL,
 		public reflectionRatio = 0,
 		public reflectionGloss = 1,
 		public refractionIndex = 1,

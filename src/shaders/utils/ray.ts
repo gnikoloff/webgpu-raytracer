@@ -168,15 +168,4 @@ export default wgsl/* wgsl */ `
     let py = -0.5 + rngNextFloat(rngState);
     return (px * (*camera).pixelDeltaU) + (py * (*camera).pixelDeltaV);
   }
-
-  @must_use
-  fn rayColor(ray: ptr<function, Ray>, spheres: array<Sphere, 5>) -> vec3f {
-    var rec: HitRecord;
-    if (spheresHit(ray, &rec, Interval(0, f32max), spheres)) {
-      return 0.5 * (rec.normal + vec3f(1.0, 1.0, 1.0));
-    }
-    let unitDirection = normalize((*ray).direction);
-    let a = 0.5 * (unitDirection.y + 1.0);
-    return (1.0-a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
-  }
 `;

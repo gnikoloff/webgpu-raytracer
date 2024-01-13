@@ -15,6 +15,14 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
     }
 
+    body.loaded #header {
+      display: block;
+    }
+
+    body.loaded #lds-dual-ring {
+      display: none;
+    }
+
     a {
       color: white;
     }
@@ -26,6 +34,31 @@
       z-index: -1;
     }
 
+
+    #lds-dual-ring {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      display: block;
+      width: 14px;
+      height: 14px;
+      margin: -7px 0 0 0 -7px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      border-color: #fff transparent #fff transparent;
+      animation: lds-dual-ring 1.2s linear infinite;
+    }
+
+    @keyframes lds-dual-ring {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
     #header {
       position: fixed;
       top: 0;
@@ -33,6 +66,7 @@
       padding: 1rem;
       background: rgba(0, 0, 0, 0.5);
       color: white;
+      display: none;
     }
 
     #header h1 {
@@ -77,20 +111,63 @@
     #progress-percent.docked-right {
       right: 0;
     }
+
+    #no-webgpu {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 999999999;
+      background: black;
+      color: white;
+      padding: 1rem;
+      box-sizing: border-box;
+      display: none;
+    }
+
+    #no-webgpu-screenshot img {
+      max-width: 700px;
+      width: 100%;
+    }
   </style>
 </head>
 
 <body>
 
+  <div id="no-webgpu">
+    <h1>Uh-oh, WebGPU not supported!</h1>
+    <p>This raytracer is written with the new WebGPU API. Seems like your browser does not support it.</p>
+    <p>Please upgrade to a modern browser.</p>
+    <p>For Safari you can check out details how to do so <a
+        href="https://webkit.org/blog/14879/webgpu-now-available-for-testing-in-safari-technology-preview/">here</a>.
+    </p>
+    <p>For Firefox you can check details <a href="https://stackoverflow.com/a/74967300/1777688">here</a>.</p>
+    <p id="no-webgpu-screenshot"></p>
+  </div>
+
+  <div id="lds-dual-ring"></div>
+
   <header id="header">
     <h1>WebGPU Raytracer</h1>
-    <h5>Code & info on Github. Made by <a target="_blank" href="https://georgi-nikolov.com/">Georgi Nikolov</a></h5>
+    <h5>Code & info on <a href="https://github.com/gnikoloff/webgpu-raytracer" target="_blank">Github</a>. Made by <a
+        target="_blank" href="https://georgi-nikolov.com/">Georgi Nikolov</a></h5>
+    <p>Hold left mouse button to rotate and right to pan.</p>
     <div id="loader">
       <div id="progress"><span id="progress-percent"></span></div>
     </div>
     <p>Sample counter: <span id="frame-count"></span></p>
   </header>
 
+  <script>
+    if (!navigator.gpu) {
+      document.getElementById("no-webgpu").style.display = "block"
+      document.getElementById("no-webgpu-screenshot").innerHTML = `
+          <img src="no-webgpu-screenshot.png" alt="Render containing a bunch of models with the WebGPU raytracer" />
+        `
+      throw new Error("WebGPU not supported!")
+    }
+  </script>
   <script type="module" src="src/index.ts"></script>
 
 </body>

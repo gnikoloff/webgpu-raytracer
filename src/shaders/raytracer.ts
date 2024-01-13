@@ -4,12 +4,10 @@ import UtilsShaderChunk from "./utils/utils";
 import CommonShaderChunk from "./utils/common";
 import RayShaderChunk from "./utils/ray";
 import VecShaderChunk from "./utils/vec";
-import HittableShaderChunk from "./utils/hittable";
 import IntervalShaderChunk from "./utils/interval";
 import CameraShaderChunk from "./utils/camera";
 import ColorShaderChunk from "./utils/color";
 import MaterialShaderChunk from "./utils/material";
-import ShapeShaderChunk from "./utils/shape";
 
 export default wgsl/* wgsl */ `
   const BV_MAX_STACK_DEPTH = 16;
@@ -18,9 +16,7 @@ export default wgsl/* wgsl */ `
   ${UtilsShaderChunk}
   ${CommonShaderChunk}
   ${RayShaderChunk}
-  ${ShapeShaderChunk}
   ${VecShaderChunk}
-  ${HittableShaderChunk}
   ${IntervalShaderChunk}
   ${CameraShaderChunk}
   ${ColorShaderChunk}
@@ -40,8 +36,6 @@ export default wgsl/* wgsl */ `
   override OBJECTS_COUNT_IN_SCENE: u32;
   override MAX_BVs_COUNT_PER_MESH: u32;
   override MAX_FACES_COUNT_PER_MESH: u32;
-
-  const MAX_RAY_BOUNCE_DEPTH = 16;
 
   @compute @workgroup_size(WORKGROUP_SIZE_X, WORKGROUP_SIZE_Y)
   fn main(@builtin(global_invocation_id) globalInvocationId : vec3<u32>,) {

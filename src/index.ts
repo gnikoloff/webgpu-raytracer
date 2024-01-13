@@ -32,20 +32,6 @@ const guiSettings = {
 	"Debug BVH": false,
 	"Use Phong Shading": true,
 };
-const gui = new dat.GUI();
-gui.width = 400;
-gui.add(guiSettings, "Debug BVH");
-gui.add(guiSettings, "Ray Bounces Count", 1, 16, 1).onChange((v) => {
-	frameCounter = 0;
-	maxBounces = v;
-});
-gui.add(guiSettings, "Max Samples", 1, 10000, 5).onChange((v) => {
-	frameCounter = 0;
-});
-gui.add(guiSettings, "Use Phong Shading").onChange((v) => {
-	flatShading = v ? 0 : 1;
-	frameCounter = 0;
-});
 
 // Set canvas and GPU device
 const canvas = document.createElement("canvas") as HTMLCanvasElement;
@@ -56,13 +42,16 @@ const device = await adapter.requestDevice({
 	requiredLimits: {},
 });
 const context = canvas.getContext("webgpu") as GPUCanvasContext;
-const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+const presentationFormat = navigator.gpu.getPreferredCanvasFormat
+	? navigator.gpu.getPreferredCanvasFormat()
+	: "bgra8unorm";
 context.configure({
 	device,
 	format: presentationFormat,
 	alphaMode: "premultiplied",
 });
 
+// Set up camera and scene
 const camera = new Camera(
 	canvas,
 	vec3.fromValues(0, 0, 3.5),
@@ -70,33 +59,39 @@ const camera = new Camera(
 	canvas.width / canvas.height,
 );
 const scene = new Scene(device);
-
-const renderPassDescriptor: GPURenderPassDescriptor = {
-	colorAttachments: [
-		{
-			view: null,
-			clearValue: { r: 0, g: 0, b: 0, a: 1 },
-			loadOp: "clear",
-			storeOp: "store",
-		},
-	],
-};
-
 await scene.loadModels();
 
-// Set up compute, debug and present pipelines
+// Set up blit-to-screen render pipeline
 const blitScreenShaderModule = device.createShaderModule({
 	code: presentShaderSrc,
 });
-const debugBVHShaderModule = device.createShaderModule({
-	code: debugBVHShaderSrc,
+const blitToScreenBindGroup0Layout = device.createBindGroupLayout({
+	entries: [
+		{
+			binding: 0,
+			visibility: GPUShaderStage.FRAGMENT,
+			buffer: { type: "storage" },
+		},
+		{
+			binding: 1,
+			visibility: GPUShaderStage.FRAGMENT,
+			buffer: {
+				type: "uniform",
+			},
+		},
+		{
+			binding: 2,
+			visibility: GPUShaderStage.FRAGMENT,
+			buffer: {
+				type: "uniform",
+			},
+		},
+	],
 });
-const raytraceShaderModule = device.createShaderModule({
-	code: raytracerShaderSrc,
-});
-
 const blitToScreenPipeline = device.createRenderPipeline({
-	layout: "auto",
+	layout: device.createPipelineLayout({
+		bindGroupLayouts: [blitToScreenBindGroup0Layout],
+	}),
 	vertex: {
 		module: blitScreenShaderModule,
 		entryPoint: "vertexMain",
@@ -116,8 +111,33 @@ const blitToScreenPipeline = device.createRenderPipeline({
 	},
 });
 
+// Set up debug BVH render pipeline
+const debugBVHBindGroup0Layout = device.createBindGroupLayout({
+	entries: [
+		{
+			binding: 0,
+			visibility: GPUShaderStage.VERTEX,
+			buffer: {
+				type: "read-only-storage",
+			},
+		},
+		{
+			binding: 1,
+			visibility: GPUShaderStage.VERTEX,
+			buffer: {
+				type: "uniform",
+			},
+		},
+	],
+});
+
+const debugBVHShaderModule = device.createShaderModule({
+	code: debugBVHShaderSrc,
+});
 const debugBVHPipeline = device.createRenderPipeline({
-	layout: "auto",
+	layout: device.createPipelineLayout({
+		bindGroupLayouts: [debugBVHBindGroup0Layout],
+	}),
 	vertex: {
 		module: debugBVHShaderModule,
 		entryPoint: "vertexMain",
@@ -146,8 +166,73 @@ const debugBVHPipeline = device.createRenderPipeline({
 	},
 });
 
+// Set up raytrace compute pipeline
+const raytraceBindGroup0Layout = device.createBindGroupLayout({
+	entries: [
+		{
+			binding: 0,
+			visibility: GPUShaderStage.COMPUTE,
+			buffer: {
+				type: "storage",
+			},
+		},
+		{
+			binding: 1,
+			visibility: GPUShaderStage.COMPUTE,
+			buffer: {
+				type: "storage",
+			},
+		},
+		{
+			binding: 2,
+			visibility: GPUShaderStage.COMPUTE,
+			buffer: {
+				type: "uniform",
+			},
+		},
+		{
+			binding: 3,
+			visibility: GPUShaderStage.COMPUTE,
+			buffer: {
+				type: "uniform",
+			},
+		},
+	],
+});
+
+const raytraceBindGroup1Layout = device.createBindGroupLayout({
+	entries: [
+		{
+			binding: 0,
+			visibility: GPUShaderStage.COMPUTE,
+			buffer: {
+				type: "read-only-storage",
+			},
+		},
+		{
+			binding: 1,
+			visibility: GPUShaderStage.COMPUTE,
+			buffer: {
+				type: "read-only-storage",
+			},
+		},
+		{
+			binding: 2,
+			visibility: GPUShaderStage.COMPUTE,
+			buffer: {
+				type: "read-only-storage",
+			},
+		},
+	],
+});
+
+const raytraceShaderModule = device.createShaderModule({
+	code: raytracerShaderSrc,
+});
 const computePipeline = device.createComputePipeline({
-	layout: "auto",
+	layout: device.createPipelineLayout({
+		bindGroupLayouts: [raytraceBindGroup0Layout, raytraceBindGroup1Layout],
+	}),
 	compute: {
 		module: raytraceShaderModule,
 		entryPoint: "main",
@@ -165,12 +250,14 @@ const raytracedStorageBuffer = device.createBuffer({
 	size: Float32Array.BYTES_PER_ELEMENT * 4 * canvas.width * canvas.height,
 	usage: GPUBufferUsage.STORAGE,
 });
+raytracedStorageBuffer.label = "Raytraced Image Buffer";
 
 const rngStateBuffer = device.createBuffer({
 	size: Uint32Array.BYTES_PER_ELEMENT * canvas.width * canvas.height,
 	usage: GPUBufferUsage.STORAGE,
 	mappedAtCreation: true,
 });
+rngStateBuffer.label = "RNG State Buffer";
 const rngState = new Uint32Array(rngStateBuffer.getMappedRange());
 for (let i = 0; i < canvas.width * canvas.height; i++) {
 	rngState[i] = i;
@@ -186,6 +273,7 @@ const commonUniformsBuffer = device.createBuffer({
 	size: commonUniformValues.arrayBuffer.byteLength,
 	usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
+commonUniformsBuffer.label = "Common Uniforms Buffer";
 
 // Set up camera uniforms
 const cameraShaderDefs = makeShaderDataDefinitions(CameraShaderChunk);
@@ -194,6 +282,7 @@ const cameraUniformBuffer = device.createBuffer({
 	size: cameraUniformValues.arrayBuffer.byteLength,
 	usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
+cameraUniformBuffer.label = "Camera Uniforms Buffer";
 cameraUniformValues.set({
 	viewportSize: [canvas.width, canvas.height],
 	imageWidth: canvas.width,
@@ -210,8 +299,9 @@ const cameraViewProjMatrixBuffer = device.createBuffer({
 	size: 16 * Float32Array.BYTES_PER_ELEMENT,
 	usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 });
+cameraViewProjMatrixBuffer.label = "Camera ViewProjection Matrix";
 
-const showResultBindGroup = device.createBindGroup({
+const blitToScreenBindGroup0 = device.createBindGroup({
 	layout: blitToScreenPipeline.getBindGroupLayout(0),
 	entries: [
 		{
@@ -306,11 +396,24 @@ const computeBindGroup1 = device.createBindGroup({
 	],
 });
 
+const renderPassDescriptor: GPURenderPassDescriptor = {
+	colorAttachments: [
+		{
+			view: null,
+			clearValue: { r: 0, g: 0, b: 0, a: 1 },
+			loadOp: "clear",
+			storeOp: "store",
+		},
+	],
+};
+
 // Init app
+document.body.classList.add("loaded");
 document.body.appendChild(canvas);
 canvas.addEventListener("mousedown", onMouseDown);
 canvas.addEventListener("mouseup", onMouseUp);
 canvas.addEventListener("wheel", onWheel, { passive: true });
+initGUI();
 requestAnimationFrame(drawFrame);
 
 function onMouseDown(e: MouseEvent) {
@@ -399,9 +502,9 @@ function drawFrame() {
 		.createView();
 	const renderPass = commandEncoder.beginRenderPass(renderPassDescriptor);
 
-	// blit to screen
+	// blit raytraced image buffer to screen
 	renderPass.setPipeline(blitToScreenPipeline);
-	renderPass.setBindGroup(0, showResultBindGroup);
+	renderPass.setBindGroup(0, blitToScreenBindGroup0);
 	renderPass.draw(6);
 
 	// debug BVH
@@ -426,4 +529,21 @@ function resize() {
 	canvas.style.height = `${h}px`;
 	canvas.style.marginTop = `${-h * 0.5}px`;
 	canvas.style.marginLeft = `${-w * 0.5}px`;
+}
+
+function initGUI() {
+	const gui = new dat.GUI();
+	gui.width = 400;
+	gui.add(guiSettings, "Debug BVH");
+	gui.add(guiSettings, "Ray Bounces Count", 1, 16, 1).onChange((v) => {
+		frameCounter = 0;
+		maxBounces = v;
+	});
+	gui.add(guiSettings, "Max Samples", 1, 10000, 5).onChange((v) => {
+		frameCounter = 0;
+	});
+	gui.add(guiSettings, "Use Phong Shading").onChange((v) => {
+		flatShading = v ? 0 : 1;
+		frameCounter = 0;
+	});
 }

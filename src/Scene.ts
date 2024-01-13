@@ -2,7 +2,6 @@ import wavefrontObjParser from "obj-file-parser";
 import wavefrontMtlParser from "mtl-file-parser";
 import { vec3, vec4 } from "gl-matrix";
 
-import { Face } from "./interfaces";
 import { BV } from "./BV";
 import { Material } from "./Material";
 
@@ -28,6 +27,20 @@ interface Mtl {
 		green: number;
 		blue: number;
 	};
+}
+
+export interface Face {
+	p0: vec3;
+	p1: vec3;
+	p2: vec3;
+
+	n0: vec3;
+	n1: vec3;
+	n2: vec3;
+
+	fn: vec3;
+	fi: number; // index into face array
+	mi: number; // index into the material
 }
 
 interface ParsedModel {
@@ -178,8 +191,6 @@ export class Scene {
 			const material = new Material(
 				vec4.fromValues(mtl.Kd.red, mtl.Kd.green, mtl.Kd.blue, 1),
 			);
-			material.mtlType = Material.LAMBERTIAN_MATERIAL;
-			console.log(mtl.name);
 			switch (mtl.name) {
 				case "Light":
 					material.mtlType = Material.EMISSIVE_MATERIAL;
@@ -204,30 +215,15 @@ export class Scene {
 					material.reflectionRatio = 1;
 					material.reflectionGloss = 0.4;
 					break;
+				case "Suzanne":
+					// material.mtlType = Material.REFLECTIVE_MATERIAL;
+					// material.reflectionRatio = 0.1;
+					// material.reflectionGloss = ;
+					break;
 				default:
 					break;
 			}
-			// if (mtl.name === "Light") {
-			// 	material.mtlType = Material.EMISSIVE_MATERIAL;
-			// 	material.albedo[0] = 3;
-			// 	material.albedo[1] = 3;
-			// 	material.albedo[2] = 3;
-			// } else if (mtl.name === "BloodyRed") {
-			// 	material.mtlType = Material.LAMBERTIAN_MATERIAL;
-			// 	material.refractionIndex = 1.52;
-			// 	material.albedo[0] = 1;
-			// 	material.albedo[1] = 1;
-			// 	material.albedo[2] = 1;
-			// } else if (mtl.name === "suzanne") {
-			// 	material.albedo[0] = 1;
-			// 	material.albedo[1] = 1;
-			// 	material.albedo[2] = 1;
-			// } else if (mtl.name === "teapot") {
-			// 	material.reflectionRatio = 0.9;
-			// } else if (mtl.name === "ladder") {
-			// 	material.reflectionRatio = 0.3;
-			// 	material.reflectionGloss = 0.8;
-			// }
+
 			return material;
 		});
 	}
@@ -268,6 +264,7 @@ export class Scene {
 				usage: GPUBufferUsage.STORAGE,
 				mappedAtCreation: true,
 			});
+			this.facesBuffer.label = "Faces Buffer";
 			const facesBufferMappedRange = this.facesBuffer.getMappedRange();
 			const faceData = new Float32Array(facesBufferMappedRange);
 			const faceColorData = new Uint32Array(facesBufferMappedRange);
@@ -328,7 +325,7 @@ export class Scene {
 				usage: GPUBufferUsage.STORAGE,
 				mappedAtCreation: true,
 			});
-			this.aabbsBuffer.label = "AABB Buffer";
+			this.aabbsBuffer.label = "AABBs Buffer";
 
 			const aabbArrBuffer = this.aabbsBuffer.getMappedRange();
 			const aabbPosData = new Float32Array(aabbArrBuffer);

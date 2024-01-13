@@ -1,11 +1,11 @@
 import { wgsl } from "wgsl-preprocessor/wgsl-preprocessor.js";
 
+import CommonShaderChunk from "./utils/common";
 import VertexShaderChunk from "./utils/vertex";
-import ShapeShaderChunk from "./utils/shape";
 
 export default wgsl/* wgsl */ `
+  ${CommonShaderChunk}
   ${VertexShaderChunk}
-  ${ShapeShaderChunk}
 
   @group(0) @binding(0) var<storage, read> AABBs: array<AABB>;
   @group(0) @binding(1) var<uniform> viewProjectionMatrix: mat4x4f;
