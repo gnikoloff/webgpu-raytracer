@@ -2,11 +2,11 @@
 
 1. [Requirements](#requirements)
 2. [Summary](#summary)
-3. [App Architecture](#technical)
-4. [Typescript](#typescript)
-5. [Compute Shader](#compute-shader)
-6. [Blit-to-screen Fragment Shader](#blit-to-screen-fragment-shader)
-7. [References and Readings](#references-and-readings)
+3. [App Architecture](#app-architecture)
+  1. [Typescript](#typescript)
+  2. [Compute Shader](#compute-shader)
+  3. [Blit-to-screen Fragment Shader](#blit-to-screen-fragment-shader)
+4. [References and Readings](#references-and-readings)
 
 ## Requirements
 
