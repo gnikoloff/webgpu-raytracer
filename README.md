@@ -6,6 +6,7 @@
    1. [Typescript](#typescript)
    2. [Compute Shader](#compute-shader)
    3. [Blit-to-Screen Fragment Shader](#blit-to-screen-fragment-shader)
+   4. [Libraries used](#libraries-used)
 4. [References and Readings](#references-and-readings)
 
 ## Requirements
@@ -78,9 +79,17 @@ color ray_color(const ray& r, const hittable& world) const {
 
 Recursion is not allowed on the GPU however. Therefore the app uses loops to achieve recursion in the compute shader.
 
-### Blit-to-Screen Fragment Shade
+### Blit-to-Screen Fragment Shader
 
 After the raytracing compute shader is finished on each frame, it's results are blitted to the device screen using a fragment shader ran on a fullscreen quad. At this point tonemapping is applied too.
+
+### Libraries used
+
+1. [`gl-matrix`](https://glmatrix.net/) for common matrix / vector operations
+2. [`mtl-file-parser`](https://www.npmjs.com/package/mtl-file-parser) for Wavefront MTL file parsing
+3. [`obj-file-parser`](https://www.npmjs.com/package/obj-file-parser) for Wavefront OBJ file parsing
+4. [`webgpu-utils`](https://github.com/greggman/webgpu-utils) for simplifying passing values to WebGPU buffers
+5. [`WebGPU Offset Computer`](https://webgpufundamentals.org/webgpu/lessons/resources/wgsl-offset-computer.html) - invaluable tool to visualise std140 struct layouts
 
 ## References and Readings
 
