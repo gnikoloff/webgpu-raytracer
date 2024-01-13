@@ -14,9 +14,16 @@
   },
   "keywords": [
     "webgpu",
-    "raytracing"
+    "raytracing",
+    "raytracer",
+    "pathtracing",
+    "pathtracer"
   ],
-  "author": "Georgi Nikolov",
+  "author": {
+    "name": "Georgi Nikolov",
+    "email": "connect@georgi-nikolov.com",
+    "url": "https://georgi-nikolov.com"
+  },
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/gnikoloff/webgpu-raytracer/issues"
