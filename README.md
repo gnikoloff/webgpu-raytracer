@@ -5,7 +5,7 @@
 3. [App Architecture](#app-architecture)
    1. [Typescript](#typescript)
    2. [Compute Shader](#compute-shader)
-   3. [Blit-to-screen Fragment Shader](#blit-to-screen-fragment-shader)
+   3. [Blit-to-Screen Fragment Shader](#blit-to-screen-fragment-shader)
 4. [References and Readings](#references-and-readings)
 
 ## Requirements
