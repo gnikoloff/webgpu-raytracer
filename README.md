@@ -1,6 +1,6 @@
 # WebGPU Raytracer
 
-[https://gnikoloff.github.io/webgpu-raytracer/](https://gnikoloff.github.io/webgpu-raytracer/)
+Live link - [https://gnikoloff.github.io/webgpu-raytracer/](https://gnikoloff.github.io/webgpu-raytracer/)
 
 ![Front render of the WebGPU pathtracer](https://github.com/gnikoloff/webgpu-raytracer/blob/main/screenshot-0.png?raw=true)
 
