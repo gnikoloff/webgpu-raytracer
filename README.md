@@ -97,3 +97,5 @@ After the raytracing compute shader is finished on each frame, it's results are 
 2. [Intel Path-Tracing Workshop](https://www.intel.com/content/www/us/en/developer/videos/path-tracing-workshop-part-1.html) - Raytracing in a Weekend runs on the CPU and does not really explain how to port it to the GPU (where recursion is not allowed). This 2 videos show very well how to do the same task via loops in GLSL. The theory and math presented are also really good.
 3. [Weekend Raytracing with wgpu](https://nelari.us/post/weekend_raytracing_with_wgpu_1/) - Porting "Raytracing in a Weekend" Book 1 to WebGPU. I got the idea to use storage buffers for the frame pixel contents here.
 4. [WebGL Ray Tracer](https://github.com/kamyy/webgl-ray-tracer) - Path tracer written in WebGL. I studied the code and implemented my model parsing and BVH generation based on it.
+5. [WebGPU Spec](https://www.w3.org/TR/webgpu/)
+6. [WGSL Spec](https://www.w3.org/TR/WGSL/)
