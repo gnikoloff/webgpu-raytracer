@@ -78,7 +78,7 @@ color ray_color(const ray& r, const hittable& world) const {
 
 Recursion is not allowed on the GPU however. Therefore the app uses loops to achieve recursion in the compute shader.
 
-### Blit-to-screen Fragment Shade
+### Blit-to-Screen Fragment Shade
 
 After the raytracing compute shader is finished on each frame, it's results are blitted to the device screen using a fragment shader ran on a fullscreen quad. At this point tonemapping is applied too.
 
