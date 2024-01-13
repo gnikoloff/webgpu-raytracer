@@ -1,5 +1,7 @@
 # WebGPU Raytracer
 
+![Front render of the WebGPU pathtracer](https://github.com/gnikoloff/webgpu-raytracer/blob/main/screenshot-0.png?raw=true)
+
 1. [Requirements](#requirements)
 2. [Summary](#summary)
 3. [App Architecture](#app-architecture)
