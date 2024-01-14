@@ -70,6 +70,11 @@ export default wgsl/* wgsl */ `
       
       mtlStack[i] = material;
 
+      if (commonUniforms.debugNormals == 1u) {
+        color = (hitRec.normal + 1) * 0.5;
+        break;
+      }
+
       switch material.materialType {
         case 0: {
           color = material.albedo;

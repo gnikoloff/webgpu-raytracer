@@ -32,7 +32,7 @@ export default wgsl/* wgsl */ `
     let h = cross((*ray).direction, e2);
     let det = dot(e1, h);
 
-    if det > -0.001 && det < 0.001 {
+    if det > -0.00001 && det < 0.00001 {
       return false;
     }
 

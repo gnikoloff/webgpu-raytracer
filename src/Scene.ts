@@ -199,16 +199,16 @@ export class Scene {
 					material.albedo[2] = 6;
 					break;
 				case "Dodecahedron":
-					material.mtlType = Material.DIELECTRIC_MATERIAL;
-					material.refractionIndex = 4.5;
+					// material.mtlType = Material.DIELECTRIC_MATERIAL;
+					// material.refractionIndex = 4.5;
 					// 	// material.reflectionRatio = 1;
 					// 	// material.reflectionGloss = 0.1;
 					break;
 				// case "BloodyRed":
 				case "Floor":
 					material.mtlType = Material.REFLECTIVE_MATERIAL;
-					material.reflectionRatio = 1;
-					material.reflectionGloss = 0.2;
+					material.reflectionRatio = 0.2;
+					material.reflectionGloss = 0.4;
 					break;
 				case "Teapot":
 					material.mtlType = Material.REFLECTIVE_MATERIAL;
@@ -216,9 +216,14 @@ export class Scene {
 					material.reflectionGloss = 0.4;
 					break;
 				case "Suzanne":
-					// material.mtlType = Material.REFLECTIVE_MATERIAL;
-					// material.reflectionRatio = 0.1;
-					// material.reflectionGloss = ;
+					material.mtlType = Material.REFLECTIVE_MATERIAL;
+					material.reflectionRatio = 0.1;
+					material.reflectionGloss = 1;
+					material.refractionIndex = 2;
+					break;
+				case "Dodecahedron":
+					material.mtlType = Material.DIELECTRIC_MATERIAL;
+					material.refractionIndex = 1.52;
 					break;
 				default:
 					break;
@@ -231,8 +236,39 @@ export class Scene {
 	public facesBuffer!: GPUBuffer;
 	public aabbsBuffer!: GPUBuffer;
 	public materialsBuffer!: GPUBuffer;
+	private suzanneMaterialIdx!: number;
+	private sceneMaterials!: Material[];
 
 	constructor(private device: GPUDevice) {}
+
+	public set isSuzanneGlass(v: boolean) {
+		const numFloatsPerMaterial = 8;
+		const newSuzanneMaterialBuff = new ArrayBuffer(
+			numFloatsPerMaterial * Float32Array.BYTES_PER_ELEMENT,
+		);
+		const materialProperties = new Float32Array(newSuzanneMaterialBuff);
+		const materialType = new Uint32Array(newSuzanneMaterialBuff);
+		const mtl = this.sceneMaterials[this.suzanneMaterialIdx];
+
+		materialType[0] = v
+			? Material.DIELECTRIC_MATERIAL
+			: Material.REFLECTIVE_MATERIAL;
+
+		materialProperties[1] = mtl.reflectionRatio;
+		materialProperties[2] = mtl.reflectionGloss;
+		materialProperties[3] = mtl.refractionIndex;
+
+		materialProperties[4] = v ? 1 : mtl.albedo[0];
+		materialProperties[5] = v ? 1 : mtl.albedo[1];
+		materialProperties[6] = v ? 1 : mtl.albedo[2];
+		this.device.queue.writeBuffer(
+			this.materialsBuffer,
+			this.suzanneMaterialIdx *
+				numFloatsPerMaterial *
+				Float32Array.BYTES_PER_ELEMENT,
+			newSuzanneMaterialBuff,
+		);
+	}
 
 	public async loadModels() {
 		const [objFileContents, mtlFileContents] = await Promise.all([
@@ -245,6 +281,11 @@ export class Scene {
 			mtlFileContents,
 		);
 		const sceneMaterials = Scene.parseMaterial(mtlFileContents);
+
+		this.suzanneMaterialIdx = mtlFileContents.findIndex(
+			({ name }) => name === "Suzanne",
+		);
+		this.sceneMaterials = sceneMaterials;
 
 		Scene.MODELS_COUNT = sceneModels.length;
 
@@ -361,7 +402,7 @@ export class Scene {
 						numFloatsPerMaterial *
 						Float32Array.BYTES_PER_ELEMENT *
 						Scene.MATERIALS_COUNT,
-					usage: GPUBufferUsage.STORAGE,
+					usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
 					mappedAtCreation: true,
 				});
 				this.materialsBuffer.label = "Materials Buffer";

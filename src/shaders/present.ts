@@ -38,8 +38,7 @@ export default wgsl/* wgsl */ `
     let x = u32(uv.x * f32(cameraUniforms.viewportSize.x));
     let y = u32(uv.y * f32(cameraUniforms.viewportSize.y));
     let idx = x + y * cameraUniforms.viewportSize.x;
-    var color = raytraceImageBuffer[idx] / f32(commonUniforms.frameCounter + 1);
-    color = lottes(color);
+    let color = lottes(raytraceImageBuffer[idx] / f32(commonUniforms.frameCounter + 1));
     return vec4f(color, 1.0);
   }
 `;

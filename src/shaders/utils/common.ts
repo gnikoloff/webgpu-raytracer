@@ -6,7 +6,8 @@ export default wgsl/* wgsl */ `
     seed : vec3u,
     frameCounter: u32,
     maxBounces: u32,
-    flatShading: u32
+    flatShading: u32,
+    debugNormals: u32
   }
 
   struct HitRecord {

@@ -18,7 +18,7 @@ const MAX_BOUNCES_INTERACTING = 3;
 
 const shaderSeed = [Math.random(), Math.random(), Math.random()];
 let frameCounter = 0;
-let maxBounces = 16;
+let maxBounces = 8;
 let flatShading = 0;
 
 const $frameCounter = document.getElementById("frame-count");
@@ -27,10 +27,12 @@ const $progresPercent = document.getElementById("progress-percent");
 
 // GUI
 const guiSettings = {
-	"Max Samples": 10000,
+	"Max Samples": 5000,
 	"Ray Bounces Count": maxBounces,
 	"Debug BVH": false,
+	"Debug Normals": false,
 	"Use Phong Shading": true,
+	"Crystal Suzanne": false,
 };
 
 // Set canvas and GPU device
@@ -460,6 +462,7 @@ function drawFrame() {
 		frameCounter,
 		maxBounces,
 		flatShading,
+		debugNormals: guiSettings["Debug Normals"] ? 1 : 0,
 	});
 	device.queue.writeBuffer(
 		commonUniformsBuffer,
@@ -502,7 +505,7 @@ function drawFrame() {
 		.createView();
 	const renderPass = commandEncoder.beginRenderPass(renderPassDescriptor);
 
-	// blit raytraced image buffer to screen
+	// // blit raytraced image buffer to screen
 	renderPass.setPipeline(blitToScreenPipeline);
 	renderPass.setBindGroup(0, blitToScreenBindGroup0);
 	renderPass.draw(6);
@@ -535,15 +538,22 @@ function initGUI() {
 	const gui = new dat.GUI();
 	gui.width = 400;
 	gui.add(guiSettings, "Debug BVH");
+	gui.add(guiSettings, "Debug Normals").onChange(() => {
+		frameCounter = 0;
+	});
+	gui.add(guiSettings, "Use Phong Shading").onChange((v) => {
+		flatShading = v ? 0 : 1;
+		frameCounter = 0;
+	});
+	gui.add(guiSettings, "Crystal Suzanne").onChange((v) => {
+		scene.isSuzanneGlass = v;
+		frameCounter = 0;
+	});
 	gui.add(guiSettings, "Ray Bounces Count", 1, 16, 1).onChange((v) => {
 		frameCounter = 0;
 		maxBounces = v;
 	});
 	gui.add(guiSettings, "Max Samples", 1, 10000, 5).onChange((v) => {
-		frameCounter = 0;
-	});
-	gui.add(guiSettings, "Use Phong Shading").onChange((v) => {
-		flatShading = v ? 0 : 1;
 		frameCounter = 0;
 	});
 }
