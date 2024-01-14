@@ -4,7 +4,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Primary Meta Tags -->
   <title>WebGPU Raytracer</title>
+  <meta name="title" content="WebGPU Raytracer" />
+  <meta name="description" content="Realtime pathtracing via WebGPU compute shader" />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://gnikoloff.github.io/webgpu-raytracer/" />
+  <meta property="og:title" content="WebGPU Raytracer" />
+  <meta property="og:description" content="Realtime pathtracing via WebGPU compute shader" />
+  <meta property="og:image" content="https://gnikoloff.github.io/webgpu-raytracer/social.png" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://gnikoloff.github.io/webgpu-raytracer/" />
+  <meta property="twitter:title" content="WebGPU Raytracer" />
+  <meta property="twitter:description" content="Realtime pathtracing via WebGPU compute shader" />
+  <meta property="twitter:image" content="https://gnikoloff.github.io/webgpu-raytracer/social.png" />
+
+  <!-- Meta Tags Generated with https://metatags.io -->
   <style>
     body {
       font-size: 14px;
@@ -131,7 +150,7 @@
       width: 100%;
     }
   </style>
-  <script type="module" crossorigin src="./assets/index-HKaoDUfx.js"></script>
+  <script type="module" crossorigin src="./assets/index-Y0Z9RpG4.js"></script>
 </head>
 
 <body>
@@ -158,6 +177,7 @@
       <div id="progress"><span id="progress-percent"></span></div>
     </div>
     <p>Sample counter: <span id="frame-count"></span></p>
+    <p>Time expired: <span id="time-expired"></span></p>
   </header>
 
   <script>
@@ -168,6 +188,15 @@
         `
       throw new Error("WebGPU not supported!")
     }
+  </script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FHFK6EXTGM"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { dataLayer.push(arguments); }
+    gtag('js', new Date());
+
+    gtag('config', 'G-FHFK6EXTGM');
   </script>
 
 </body>
