@@ -214,12 +214,13 @@ export class Scene {
 					material.mtlType = Material.REFLECTIVE_MATERIAL;
 					material.reflectionRatio = 1;
 					material.reflectionGloss = 0.4;
+					material.refractionIndex = 1.523;
 					break;
 				case "Suzanne":
 					material.mtlType = Material.REFLECTIVE_MATERIAL;
 					material.reflectionRatio = 0.1;
 					material.reflectionGloss = 1;
-					material.refractionIndex = 2;
+					material.refractionIndex = 0.1;
 					break;
 				case "Dodecahedron":
 					material.mtlType = Material.DIELECTRIC_MATERIAL;

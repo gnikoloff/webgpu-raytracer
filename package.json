@@ -36,6 +36,7 @@
   },
   "dependencies": {
     "dat.gui": "^0.7.9",
+    "dayjs": "^1.11.10",
     "gl-matrix": "^3.4.3",
     "mtl-file-parser": "^0.3.0",
     "obj-file-parser": "^0.6.2",

@@ -1,4 +1,6 @@
 import * as dat from "dat.gui";
+import * as dayjs from "dayjs";
+import Duration from "dayjs/plugin/duration";
 import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 
 import { Camera } from "./Camera";
@@ -12,6 +14,8 @@ import debugBVHShaderSrc from "./shaders/debug-bvh";
 import { vec3 } from "gl-matrix";
 import { Material } from "./Material";
 
+dayjs.extend(Duration);
+
 const COMPUTE_WORKGROUP_SIZE_X = 16;
 const COMPUTE_WORKGROUP_SIZE_Y = 16;
 const MAX_BOUNCES_INTERACTING = 3;
@@ -20,8 +24,11 @@ const shaderSeed = [Math.random(), Math.random(), Math.random()];
 let frameCounter = 0;
 let maxBounces = 8;
 let flatShading = 0;
+let oldTimeMs = 0;
+let timeExpiredMs = 0;
 
 const $frameCounter = document.getElementById("frame-count");
+const $timeExpired = document.getElementById("time-expired");
 const $progress = document.getElementById("progress");
 const $progresPercent = document.getElementById("progress-percent");
 
@@ -424,7 +431,7 @@ function onMouseDown(e: MouseEvent) {
 }
 
 function onMouseMove(e: MouseEvent) {
-	frameCounter = 0;
+	resetRender();
 }
 
 function onMouseUp(e: MouseEvent) {
@@ -433,14 +440,18 @@ function onMouseUp(e: MouseEvent) {
 }
 
 function onWheel() {
-	// maxBounces = MAX_BOUNCES_INTERACTING;
-	frameCounter = 0;
+	resetRender();
 }
 
 function drawFrame() {
+	const nowMs = performance.now();
+	const diff = nowMs - oldTimeMs;
+	oldTimeMs = nowMs;
+	timeExpiredMs += diff;
 	requestAnimationFrame(drawFrame);
 
 	$frameCounter.textContent = frameCounter.toString();
+	$timeExpired.textContent = dayjs.duration(timeExpiredMs).format("mm:ss");
 	const progresPercent = (frameCounter / guiSettings["Max Samples"]) * 100;
 	$progress.style.width = `${progresPercent}%`;
 	$progresPercent.className =
@@ -534,26 +545,32 @@ function resize() {
 	canvas.style.marginLeft = `${-w * 0.5}px`;
 }
 
+function resetRender() {
+	frameCounter = 0;
+	oldTimeMs = performance.now();
+	timeExpiredMs = 0;
+}
+
 function initGUI() {
 	const gui = new dat.GUI();
 	gui.width = 400;
 	gui.add(guiSettings, "Debug BVH");
 	gui.add(guiSettings, "Debug Normals").onChange(() => {
-		frameCounter = 0;
+		resetRender();
 	});
 	gui.add(guiSettings, "Use Phong Shading").onChange((v) => {
 		flatShading = v ? 0 : 1;
-		frameCounter = 0;
+		resetRender();
 	});
 	gui.add(guiSettings, "Crystal Suzanne").onChange((v) => {
 		scene.isSuzanneGlass = v;
-		frameCounter = 0;
+		resetRender();
 	});
 	gui.add(guiSettings, "Ray Bounces Count", 1, 16, 1).onChange((v) => {
-		frameCounter = 0;
+		resetRender();
 		maxBounces = v;
 	});
 	gui.add(guiSettings, "Max Samples", 1, 10000, 5).onChange((v) => {
-		frameCounter = 0;
+		resetRender();
 	});
 }
