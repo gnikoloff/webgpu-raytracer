@@ -1,7 +1,5 @@
 # WebGPU Raytracer
 
-Live link - [https://gnikoloff.github.io/webgpu-raytracer/](https://gnikoloff.github.io/webgpu-raytracer/)
-
 ![Front render of the WebGPU pathtracer](https://github.com/gnikoloff/webgpu-raytracer/blob/main/screenshot-0.png?raw=true)
 
 1. [Requirements](#requirements)
@@ -11,6 +9,7 @@ Live link - [https://gnikoloff.github.io/webgpu-raytracer/](https://gnikoloff.gi
    2. [Compute Shader](#compute-shader)
    3. [Blit-to-Screen Fragment Shader](#blit-to-screen-fragment-shader)
    4. [Libraries used](#libraries-used)
+   5. [Scene model](#scene-model)
 4. [References and Readings](#references-and-readings)
 
 ## Requirements
@@ -33,7 +32,7 @@ This portion of the code runs on the CPU. It reads the triangles information fro
 
 ### Compute Shader
 
-This is the heart of the raytracer. It bounces rays around the scene and gathers the accumulated color that it finally writes to the pixel in a image buffer. The image buffer is then blitted to the device screen.
+This is the heart of the raytracer and runs in parallel on the GPU. It bounces rays around the scene and gathers the accumulated color that it finally writes to the pixel in a image buffer. The image buffer is then blitted to the device screen.
 
 There already exist WebGPU raytracers that do all the path tracing in a fragment shader. Why did I opt for a compute shader instead? Learning practice, that's all. I was curious to explore WebGPU compute shaders more in-depth. That being said, this raytracer can easily be ported to run in a fragment shader instead.
 
@@ -94,6 +93,12 @@ After the raytracing compute shader is finished on each frame, it's results are 
 3. [`obj-file-parser`](https://www.npmjs.com/package/obj-file-parser) for Wavefront OBJ file parsing
 4. [`webgpu-utils`](https://github.com/greggman/webgpu-utils) for simplifying passing values to WebGPU buffers
 5. [`WebGPU Offset Computer`](https://webgpufundamentals.org/webgpu/lessons/resources/wgsl-offset-computer.html) - invaluable tool to visualise std140 struct layouts
+
+### Libraries used
+
+The scene was modeled in Blender and compromises of remodeled Cornell Box. Teapot, Suzanne, ladder and a dodecahedron are added to showcase different materials.
+
+![Blender view](https://github.com/gnikoloff/webgpu-raytracer/blob/main/blender-view.png?raw=true)
 
 ## References and Readings
 
