@@ -41,6 +41,8 @@ There already exist WebGPU raytracers that do all the path tracing in a fragment
 
 Testing each ray against each triangle compromising the scene is naive and slow. That's where accelerated structures such as BVH come into play. You wrap each object in a box and then recursively add more boxes for different parts of the object. Think about a person: you add a box surrounding them, then one box for each limb and one box for each finger. If the ray does not intersect the person you don't check any triangles in the libmbs or fingers. If it hits the right arm, you don't check the triangles in the left foot and so on. This significantly sped up the render times in this app.
 
+![Bounding Volume Hierarchy visualisation](https://github.com/gnikoloff/webgpu-raytracer/blob/main/bvh.png?raw=true)
+
 #### No textures, storage buffers instead
 
 In order to store all the state that the raytracer needs, such as random number generation and image state, it's easier to use WebGPU storage buffers than textures, as you can place arbitrary data in a storage buffer.
