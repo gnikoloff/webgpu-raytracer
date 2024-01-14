@@ -516,7 +516,7 @@ function drawFrame() {
 		.createView();
 	const renderPass = commandEncoder.beginRenderPass(renderPassDescriptor);
 
-	// // blit raytraced image buffer to screen
+	// blit raytraced image buffer to screen
 	renderPass.setPipeline(blitToScreenPipeline);
 	renderPass.setBindGroup(0, blitToScreenBindGroup0);
 	renderPass.draw(6);
