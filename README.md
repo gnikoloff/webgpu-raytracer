@@ -97,7 +97,7 @@ After the raytracing compute shader is finished on each frame, it's results are 
 4. [`webgpu-utils`](https://github.com/greggman/webgpu-utils) for simplifying passing values to WebGPU buffers
 5. [`WebGPU Offset Computer`](https://webgpufundamentals.org/webgpu/lessons/resources/wgsl-offset-computer.html) - invaluable tool to visualise std140 struct layouts
 
-### Libraries used
+### Scene model
 
 The scene was modeled in Blender and compromises of remodeled Cornell Box. Teapot, Suzanne, ladder and a dodecahedron are added to showcase different materials.
 
