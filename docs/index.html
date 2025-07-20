@@ -25,6 +25,10 @@
 
   <!-- Meta Tags Generated with https://metatags.io -->
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-size: 14px;
       overflow: hidden;
@@ -46,6 +50,42 @@
       color: white;
     }
 
+    p {
+      margin-bottom: 0;
+    }
+
+    svg {
+      display: block;
+      width: 20px;
+      height: 20px;
+    }
+
+    #toggle-header {
+      background: none;
+      border: none;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    #hide-icon {
+      display: block;
+    }
+
+    #show-icon {
+      display: none;
+    }
+
+    #toggle-header.active #hide-icon {
+      display: none;
+    }
+
+    #toggle-header.active #show-icon {
+      display: block;
+    }
+
     #c {
       position: fixed;
       top: 50%;
@@ -53,6 +93,11 @@
       z-index: -1;
     }
 
+    .dg.a {
+      max-width: 100% !important;
+      margin-right: 0 !important;
+      /* display: none !important; */
+    }
 
     #lds-dual-ring {
       position: fixed;
@@ -78,14 +123,43 @@
       }
     }
 
+    .monospace-value {
+      font-family: monospace;
+    }
+
+    #header-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    #header-body {
+      display: none;
+    }
+
+    #header-body.active {
+      display: block;
+    }
+
     #header {
       position: fixed;
-      top: 0;
+      bottom: 0;
       left: 0;
-      padding: 1rem;
+      width: 100%;
       background: rgba(0, 0, 0, 0.5);
       color: white;
       display: none;
+      padding: 1rem;
+      max-width: 500px;
+    }
+
+    @media screen and (min-width: 820px) {
+      #header {
+        top: 0;
+        width: unset;
+        bottom: unset;
+        max-width: unset;
+      }
     }
 
     #header h1 {
@@ -150,7 +224,7 @@
       width: 100%;
     }
   </style>
-  <script type="module" crossorigin src="./assets/index-Y0Z9RpG4.js"></script>
+  <script type="module" crossorigin src="./assets/index-iRmQzlOg.js"></script>
 </head>
 
 <body>
@@ -169,15 +243,30 @@
   <div id="lds-dual-ring"></div>
 
   <header id="header">
-    <h1>WebGPU Raytracer</h1>
-    <h5>Code & info on <a href="https://github.com/gnikoloff/webgpu-raytracer" target="_blank">Github</a>. Made by <a
-        target="_blank" href="https://georgi-nikolov.com/">Georgi Nikolov</a></h5>
-    <p>Hold left mouse button to rotate and right to pan.</p>
-    <div id="loader">
-      <div id="progress"><span id="progress-percent"></span></div>
+    <div id="header-header">
+      <h1>WebGPU Raytracer</h1>
+      <button id="toggle-header" role="button">
+        <svg id="hide-icon" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+          <path fill="white"
+            d="M12.81 4.36l-1.77 1.78a4 4 0 0 0-4.9 4.9l-2.76 2.75C2.06 12.79.96 11.49.2 10a11 11 0 0 1 12.6-5.64zm3.8 1.85c1.33 1 2.43 2.3 3.2 3.79a11 11 0 0 1-12.62 5.64l1.77-1.78a4 4 0 0 0 4.9-4.9l2.76-2.75zm-.25-3.99l1.42 1.42L3.64 17.78l-1.42-1.42L16.36 2.22z" />
+        </svg>
+        <svg id="show-icon" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+          <path fill="white"
+            d="M.2 10a11 11 0 0 1 19.6 0A11 11 0 0 1 .2 10zm9.8 4a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0-2a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" />
+        </svg>
+      </button>
     </div>
-    <p>Sample counter: <span id="frame-count"></span></p>
-    <p>Time expired: <span id="time-expired"></span></p>
+    <div id="header-body" class="active">
+      <h5>Code & info on <a href="https://github.com/gnikoloff/webgpu-raytracer" target="_blank">Github</a>. Made by <a
+          target="_blank" href="https://georgi-nikolov.com/">Georgi Nikolov</a></h5>
+      <p>Hold left mouse button to rotate and right to pan.</p>
+      <div id="loader">
+        <div id="progress"><span id="progress-percent"></span></div>
+      </div>
+      <p>Sample counter: <span class="monospace-value" id="frame-count"></span>&nbsp;&nbsp;|&nbsp;&nbsp;Time expired:
+        <span class="monospace-value" id="time-expired"></span>
+      </p>
+    </div>
   </header>
 
   <script>
