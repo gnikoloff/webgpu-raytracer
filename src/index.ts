@@ -41,6 +41,11 @@ const guiSettings = {
 	"Crystal Suzanne": false,
 };
 
+const toggleHeaderBtn = document.getElementById(
+	"toggle-header",
+) as HTMLButtonElement;
+const headerBody = document.getElementById("header-body") as HTMLDivElement;
+
 // Set canvas and GPU device
 const canvas = document.createElement("canvas") as HTMLCanvasElement;
 canvas.setAttribute("id", "c");
@@ -425,6 +430,11 @@ canvas.addEventListener("wheel", onWheel, { passive: true });
 canvas.addEventListener("touchstart", onTouchStart);
 canvas.addEventListener("touchend", onTouchEnd);
 
+toggleHeaderBtn.addEventListener("click", () => {
+	toggleHeaderBtn.classList.toggle("active");
+	headerBody.classList.toggle("active");
+});
+
 initGUI();
 requestAnimationFrame(drawFrame);
 
@@ -573,6 +583,7 @@ function resetRender() {
 
 function initGUI() {
 	const gui = new dat.GUI();
+	gui.close();
 	gui.width = 400;
 	gui.add(guiSettings, "Debug BVH");
 	gui.add(guiSettings, "Debug Normals").onChange(() => {
