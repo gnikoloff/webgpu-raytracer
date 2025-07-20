@@ -25,6 +25,10 @@
 
   <!-- Meta Tags Generated with https://metatags.io -->
   <style>
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       font-size: 14px;
       overflow: hidden;
@@ -46,6 +50,10 @@
       color: white;
     }
 
+    p {
+      margin-bottom: 0;
+    }
+
     #c {
       position: fixed;
       top: 50%;
@@ -53,6 +61,10 @@
       z-index: -1;
     }
 
+    .dg.a {
+      max-width: 100% !important;
+      margin-right: 0 !important;
+    }
 
     #lds-dual-ring {
       position: fixed;
@@ -78,14 +90,29 @@
       }
     }
 
+    .monospace-value {
+      font-family: monospace;
+    }
+
     #header {
       position: fixed;
-      top: 0;
+      bottom: 0;
       left: 0;
-      padding: 1rem;
+      width: 100%;
       background: rgba(0, 0, 0, 0.5);
       color: white;
       display: none;
+      padding: 1rem;
+      max-width: 500px;
+    }
+
+    @media screen and (min-width: 820px) {
+      #header {
+        top: 0;
+        width: unset;
+        bottom: unset;
+        max-width: unset;
+      }
     }
 
     #header h1 {
@@ -175,8 +202,10 @@
     <div id="loader">
       <div id="progress"><span id="progress-percent"></span></div>
     </div>
-    <p>Sample counter: <span id="frame-count"></span></p>
-    <p>Time expired: <span id="time-expired"></span></p>
+    <p>Sample counter: <span class="monospace-value" id="frame-count"></span>&nbsp;&nbsp;|&nbsp;&nbsp;Time expired:
+      <span class="monospace-value" id="time-expired"></span>
+    </p>
+    <!-- <p></p> -->
   </header>
 
   <script>
