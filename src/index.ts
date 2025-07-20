@@ -6,23 +6,22 @@ import { makeShaderDataDefinitions, makeStructuredView } from "webgpu-utils";
 import { Camera } from "./Camera";
 import { Scene } from "./Scene";
 
-import CameraShaderChunk from "./shaders/utils/camera";
-import CommonShaderChunk from "./shaders/utils/common";
+import { vec3 } from "gl-matrix";
+import debugBVHShaderSrc from "./shaders/debug-bvh";
 import presentShaderSrc from "./shaders/present";
 import raytracerShaderSrc from "./shaders/raytracer";
-import debugBVHShaderSrc from "./shaders/debug-bvh";
-import { vec3 } from "gl-matrix";
-import { Material } from "./Material";
+import CameraShaderChunk from "./shaders/utils/camera";
+import CommonShaderChunk from "./shaders/utils/common";
 
 dayjs.extend(Duration);
 
 const COMPUTE_WORKGROUP_SIZE_X = 16;
 const COMPUTE_WORKGROUP_SIZE_Y = 16;
-const MAX_BOUNCES_INTERACTING = 3;
+const MAX_BOUNCES_INTERACTING = 1;
 
 const shaderSeed = [Math.random(), Math.random(), Math.random()];
 let frameCounter = 0;
-let maxBounces = 8;
+let maxBounces = 1; // 8;
 let flatShading = 0;
 let oldTimeMs = 0;
 let timeExpiredMs = 0;
@@ -422,8 +421,29 @@ document.body.appendChild(canvas);
 canvas.addEventListener("mousedown", onMouseDown);
 canvas.addEventListener("mouseup", onMouseUp);
 canvas.addEventListener("wheel", onWheel, { passive: true });
+
+canvas.addEventListener("touchstart", onTouchStart);
+canvas.addEventListener("touchend", onTouchEnd);
+
 initGUI();
 requestAnimationFrame(drawFrame);
+
+function onTouchStart(e: TouchEvent) {
+	e.preventDefault();
+	maxBounces = MAX_BOUNCES_INTERACTING;
+	canvas.addEventListener("touchmove", onTouchMove);
+}
+
+function onTouchEnd(e: TouchEvent) {
+	e.preventDefault();
+	maxBounces = guiSettings["Ray Bounces Count"];
+	canvas.removeEventListener("touchmove", onTouchMove);
+}
+
+function onTouchMove(e: TouchEvent) {
+	e.preventDefault();
+	resetRender();
+}
 
 function onMouseDown(e: MouseEvent) {
 	maxBounces = MAX_BOUNCES_INTERACTING;
