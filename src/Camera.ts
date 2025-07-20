@@ -319,7 +319,8 @@ export class Camera {
 		mat4.lookAt(this.viewMatrix, this.position, this.target, Camera.UP);
 		mat4.perspective(
 			this.projectionMatrix,
-			(this.fov * Math.PI) / 180, // Convert degrees to radians
+			// (this.fov * Math.PI) / 180, // Convert degrees to radians
+			this.fov,
 			this.aspectRatio,
 			0.1,
 			100,
