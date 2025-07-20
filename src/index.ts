@@ -21,7 +21,7 @@ const MAX_BOUNCES_INTERACTING = 1;
 
 const shaderSeed = [Math.random(), Math.random(), Math.random()];
 let frameCounter = 0;
-let maxBounces = 1; // 8;
+let maxBounces = 4; // 8
 let flatShading = 0;
 let oldTimeMs = 0;
 let timeExpiredMs = 0;
