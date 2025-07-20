@@ -198,7 +198,9 @@ export class Camera {
 				const dollyDelta =
 					(this.touchEndDistance - this.touchStartDistance) /
 					this.viewportHeight;
-				this.targetRadiusDampedAction.addForce(-dollyDelta * this.zoomSpeed);
+				this.targetRadiusDampedAction.addForce(
+					-dollyDelta * this.zoomSpeed * 3,
+				);
 				this.touchStartDistance = this.touchEndDistance;
 			}
 
